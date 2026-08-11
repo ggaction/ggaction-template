@@ -256,8 +256,9 @@ For each implemented feature:
 
 1. keep one canonical executable program at
    `examples/<feature>/program.js`;
-2. reuse that program for tests, tutorial or recipe code, and representative
-   rendered evidence instead of maintaining drifting copies;
+2. reuse that program for tests and representative rendered evidence, and use
+   its generated `docs/_generated/examples/<feature>/program.js` mirror for
+   tutorial or recipe code instead of maintaining drifting copies;
 3. provide the applicable recipe, API or reference documentation and a
    representative render;
 4. add a tutorial when the feature requires an ordered learning workflow;
@@ -270,6 +271,9 @@ Run `npm run docs:generate` after changing an owning specification, public API,
 canonical example, navigation entry, or authored documentation. It may update
 only deterministic derived documentation. It must not rewrite authored pages,
 profile-owned shell files, or `docs/profile-lock.json`.
+
+Treat `docs/_generated/` as derived evidence. Never edit it directly. Fix the
+canonical example, declaration, contract, or authored page and regenerate.
 
 Before declaring documentation aligned, run:
 

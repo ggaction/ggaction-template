@@ -83,6 +83,8 @@ docs/
 ├─ _includes/
 ├─ _sass/docs/
 ├─ assets/
+├─ _generated/
+│  └─ examples/
 ├─ _templates/
 │  ├─ RECIPE.md
 │  ├─ TUTORIAL.md
@@ -115,6 +117,12 @@ during initialization or an explicit profile upgrade. `_data/pages.yml` is the
 single navigation source. Files under `docs/_templates/` are authoring aids and
 must be excluded from navigation, search, and LLM-facing output.
 
+Files under `docs/_generated/` are deterministic documentation inputs and
+metadata. In particular, `docs/_generated/examples/<feature>/program.js` is a
+generated mirror of the canonical `examples/<feature>/program.js` used to place
+the same executable source in recipes and tutorials. Never edit or publish the
+generated mirror as an independent source.
+
 Extension documentation owns only extension behavior. It links to documentation
 for the installed ggaction version instead of copying core behavior. Each
 implemented feature must connect its specification to the applicable recipe,
@@ -126,8 +134,9 @@ Generated repositories provide these documentation commands:
 
 - `npm run docs:profile:check` performs a read-only profile and structure
   integrity check;
-- `npm run docs:generate` regenerates derived metadata, search, LLM, reference,
-  and gallery output without changing authored pages or the profile lock; and
+- `npm run docs:generate` regenerates canonical example mirrors, metadata,
+  search, LLM, reference, and gallery output without changing authored pages or
+  the profile lock; and
 - `npm run docs:verify` checks profile integrity and generated freshness, builds
   the site in a temporary directory, validates links and assets, exercises
   canonical examples through the public package, and checks responsive,

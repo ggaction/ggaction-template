@@ -1,0 +1,64 @@
+---
+layout: default
+title: FEATURE_TITLE Tutorial
+description: Build a complete FEATURE_TITLE with the public extension package.
+---
+
+<!-- AUTHORING:
+Copy this file to docs/tutorials/FEATURE-SLUG.md. Replace every uppercase
+placeholder, remove this comment, and add the page to docs/_data/pages.yml.
+Keep user-facing semantics here; do not explain private helpers or renderer
+internals.
+-->
+
+# FEATURE_TITLE Tutorial
+
+![REPRESENTATIVE_IMAGE_ALT](../assets/images/FEATURE-SLUG.png)
+
+This tutorial uses the public npm package. Its canonical executable program is
+[`examples/FEATURE-SLUG/program.js`]({{ site.repository_url }}/blob/main/examples/FEATURE-SLUG/program.js).
+Tests, this tutorial, and the representative render use that same program.
+
+Start with [Getting Started](../getting-started.md), then prepare the accepted
+input described by [DATA_CONTRACT_TITLE](../concepts/DATA-CONCEPT-SLUG.md).
+
+## Complete program
+
+```javascript
+{% include_relative ../_generated/examples/FEATURE-SLUG/program.js %}
+```
+
+## What each stage establishes
+
+| Stage | Semantic result | Graphical result |
+| --- | --- | --- |
+| `ACTION_NAME` | SEMANTIC_STATE | GRAPHICAL_STATE |
+| `ACTION_NAME` | SEMANTIC_STATE | GRAPHICAL_STATE |
+
+Explain which stages reuse public ggaction actions and which behavior belongs
+to new extension actions. State the canonical owner of each resource instead of
+describing private implementation details.
+
+## Variants
+
+Describe supported variants as small changes to the canonical program. Explain
+which user choices change and which defaults or inference rules remain stable.
+
+## Key action trace
+
+```text
+program
+└─ ACTION_NAME
+   ├─ REUSED_OR_NEW_CHILD_ACTION
+   └─ REUSED_OR_NEW_CHILD_ACTION
+```
+
+Explain why the public trace has this hierarchy and which action owns each
+observable state change.
+
+## Run and continue
+
+- Run `examples/FEATURE-SLUG/` through the documented example command.
+- Review the [FEATURE_TITLE recipe](../recipes/FEATURE-SLUG.md).
+- Continue with [ACTION_NAME API](../api/ACTION-SLUG.md) and the
+  [complete action reference](../reference/actions.md#ACTION-ANCHOR).

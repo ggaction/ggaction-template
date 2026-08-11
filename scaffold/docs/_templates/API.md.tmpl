@@ -1,0 +1,81 @@
+---
+layout: default
+title: ACTION_NAME
+description: Public contract for ACTION_NAME.
+---
+
+<!-- AUTHORING:
+Copy this file to docs/api/ACTION-SLUG.md. Replace every uppercase placeholder,
+remove this comment, and add the page to docs/_data/pages.yml. Validate the
+signature against public declarations and the packed package. Remove Related
+links that do not apply.
+-->
+
+# `ACTION_NAME`
+
+{% include chart-example.html id="FEATURE-ID" %}
+
+TASK_ORIENTED_ACTION_SUMMARY
+
+## Complete action
+
+```typescript
+ACTION_NAME(options: ACTION_OPTIONS_TYPE): ChartProgram;
+```
+
+The complete public call appears in the canonical feature program:
+
+```javascript
+{% include_relative ../_generated/examples/FEATURE-SLUG/program.js %}
+```
+
+## Inputs
+
+| Option | Required | Type | Meaning |
+| --- | --- | --- | --- |
+| `OPTION_NAME` | yes/no | `OPTION_TYPE` | OPTION_MEANING |
+
+## Defaults and inference
+
+- DEFAULT_OR_INFERENCE_RULE
+- AMBIGUITY_REQUIRING_EXPLICIT_INPUT
+
+## State and ownership
+
+Describe the semantic and graphical resources read, created, replaced, or
+removed by this action. Name the canonical owner of each resource and state what
+remains unchanged.
+
+## Lifecycle
+
+| Scenario | Observable behavior |
+| --- | --- |
+| Repeated call | REPEAT_BEHAVIOR |
+| Data change | DATA_CHANGE_BEHAVIOR |
+| Canvas or scale change | REMATERIALIZATION_BEHAVIOR |
+| Compatible edit | EDIT_BEHAVIOR |
+| Removal | REMOVAL_BEHAVIOR |
+| Invalid call | ATOMIC_FAILURE_BEHAVIOR |
+
+## Errors
+
+| Condition | Result |
+| --- | --- |
+| INVALID_OR_AMBIGUOUS_CONDITION | PUBLIC_ERROR_AND_UNCHANGED_STATE |
+
+## Advanced composition
+
+<!-- Delete this section when the action has no advanced composition contract. -->
+
+Describe supported composition with other public actions and the explicit IDs
+or targets required when compatible resources are ambiguous.
+
+## Limitations
+
+- UNSUPPORTED_CASE_AND_REASON
+
+## Related
+
+[FEATURE_TITLE recipe](../recipes/FEATURE-SLUG.md) ·
+[FEATURE_TITLE tutorial](../tutorials/FEATURE-SLUG.md) ·
+[Complete action reference](../reference/actions.md#ACTION-ANCHOR)
