@@ -86,6 +86,15 @@ After implementation, regenerate all derived evidence and verify the result from
 a clean temporary output directory. Report what changed, what was verified, and
 any unresolved decision.
 
+Treat a change as meaningful when it alters a canonical contract, repository
+instruction, scaffold or generated output, initializer behavior, verification
+behavior, or another durable user or maintainer workflow. After each verified
+meaningful conceptual change, commit only the files belonging to that change
+with a terse message and push the current branch before starting the next
+meaningful change, unless the user explicitly requests a different checkpoint
+strategy. Do not create checkpoint commits for incomplete experiments or
+unverified derived output.
+
 ## 5. Scaffold and Initializer Rules
 
 The initializer must:
