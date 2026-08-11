@@ -50,6 +50,10 @@ Maintain one canonical owner for each kind of information:
 - This root `AGENTS.md` owns the maintenance workflow for this repository.
 - Files under `scaffold/` ending in `.tmpl` own the corresponding files emitted
   into generated repositories.
+- `profiles/<profile>/profile.json` owns a documentation profile's version,
+  upstream provenance, protected inventory, and declared adaptations. Its
+  `files/` directory owns the protected repository-local snapshot copied into
+  generated documentation.
 - The template manifest owns initialization defaults, variable definitions, and
   scaffold-to-output mappings.
 - Initializer source owns rendering, validation, and filesystem behavior.
@@ -75,6 +79,10 @@ change:
 - A scaffold-contract change modifies files emitted into generated
   repositories. Update the scaffold source, manifest when applicable, and
   generation tests together.
+- A documentation-profile change modifies a protected documentation shell,
+  profile provenance, inventory, or allowed adaptation. Confirm the exact
+  upstream commit, update the profile manifest and files together, and prove
+  that undeclared differences from that commit do not exist.
 - An implementation-only change preserves observable initialization and
   generated output behavior. Prove that preservation through existing or added
   tests without rewriting the product contract.
@@ -159,6 +167,8 @@ Resolve the following decisions with the user before dependent implementation:
   safety;
 - changing the generated repository's root structure, `spec/` contract, or
   agent workflow;
+- changing a documentation profile version, pinned source, protected inventory,
+  or compatibility contract;
 - changing canonical ownership between editable and generated files;
 - adding a runtime dependency, hosted service, account requirement, telemetry,
   or network requirement;
