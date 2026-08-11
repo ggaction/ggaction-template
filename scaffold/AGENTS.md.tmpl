@@ -1,0 +1,343 @@
+# Extension Repository Instructions
+
+## 1. Mission and Authority
+
+This repository develops `{{packageName}}`, a ggaction extension for the
+`{{domain}}` domain.
+
+The living specifications under `spec/` are the canonical product contract for
+the extension. Implementation, types, tests, examples, and documentation must
+remain aligned with them.
+
+The installed ggaction package is the authority for current core behavior and
+extension capabilities. Before specification interviews, design, or
+implementation, read its installed version and
+`knowledge/extension-authoring.md`. Consult the installed runtime and
+declarations when exact behavior matters. Do not substitute information from a
+mutable GitHub branch or another ggaction version.
+
+This `AGENTS.md` owns the development workflow for this extension repository. It
+does not define or override ggaction internals.
+
+If the requested extension conflicts with the installed public contract, keep
+the conflict explicit and resolve it with the user. Do not invent unsupported
+behavior, copy private internals, or hide a required core change inside the
+extension.
+
+## 2. Required Startup Sequence
+
+Before interviewing the user, changing specifications, or editing code:
+
+1. Read `package.json` and identify the declared ggaction version.
+2. Ensure dependencies are installed, then confirm the actual installed version
+   from `node_modules/ggaction/package.json`.
+3. Read the installed
+   `node_modules/ggaction/knowledge/extension-authoring.md` completely.
+4. Follow its minimum-intake instructions. Inspect the installed extension
+   declarations, runtime entry point, and only the action cards relevant to the
+   current feature.
+5. Read `spec/SPEC.md`, every specification it indexes, and every open decision
+   that affects the current work.
+6. Confirm that the installed public API supports every core capability assumed
+   by the specification.
+
+Repeat this sequence whenever the ggaction dependency changes.
+
+Do not preload the complete ggaction documentation. Expand context only when the
+installed compact guide or relevant action cards do not settle a concrete
+question.
+
+If the installed guide is missing, the declared and installed versions differ,
+or a required public capability does not exist, stop dependent work and record
+the issue as an explicit decision. Do not silently use another package version,
+a GitHub branch, or a private source file as a substitute.
+
+## 3. Specification Interview
+
+Treat specification authoring as a guided interview, not as a form the user must
+complete alone.
+
+Ask one focused question at a time. Before asking, summarize the current
+understanding, explain why the decision matters, and present concrete choices
+when useful. Recommend the simplest option consistent with the installed
+ggaction contract, but do not decide irreversible product behavior on the
+user's behalf.
+
+Interview in this order:
+
+1. desired visualization outcome;
+2. scope and non-goals;
+3. accepted external data formats;
+4. canonical domain representation and deterministic conversions;
+5. feature families and observable behavior;
+6. existing ggaction actions to reuse;
+7. genuinely new extension actions and their boundaries;
+8. shortest, representative, and boundary examples;
+9. lifecycle, rendering, and visual acceptance criteria; and
+10. unresolved product or upstream-core decisions.
+
+After each confirmed answer:
+
+- update the canonical specification that owns the decision;
+- update `spec/SPEC.md` when its index or project-level summary changes;
+- distinguish confirmed requirements, agent inferences, and unresolved
+  decisions;
+- attach relevant references and record the installed ggaction version used for
+  compatibility decisions; and
+- show the user a concise summary of what changed before asking the next
+  question.
+
+Do not leave confirmed decisions only in chat history. Do not duplicate the same
+contract across several specification files.
+
+Implementation may begin only when the specifications required for the selected
+feature are complete and every blocking decision is resolved. Non-blocking open
+questions must remain explicit in `spec/decisions/`.
+
+## 4. Specification Ownership
+
+Keep one canonical owner for each kind of product information.
+
+- `spec/SPEC.md` owns the extension purpose, version, scope, non-goals, package
+  compatibility, and indexes of active data, feature, and decision
+  specifications.
+- `spec/data/*.md` owns accepted external formats, the canonical domain
+  representation, validation rules, and deterministic conversions.
+- `spec/features/*.md` owns one visualization family, its required data,
+  observable behavior, reused ggaction actions, new extension actions, ordered
+  action hierarchy, executable examples, lifecycle, and acceptance criteria.
+- `spec/decisions/*.md` owns unresolved or accepted product and architecture
+  decisions, their alternatives, rationale, and consequences.
+- `spec/_templates/*.md` provides authoring forms only. Files in this directory
+  are not active specifications.
+- `spec/generated/*` contains derived indexes and traceability data. Never edit
+  these files directly.
+
+A fact must have one canonical owner. Other specifications should link to that
+owner instead of copying its text.
+
+When a decision changes:
+
+1. update its canonical specification;
+2. update every directly affected specification;
+3. regenerate derived indexes and traceability data;
+4. validate that no stale or contradictory contract remains; and
+5. update implementation and evidence in the same coherent change when public
+   behavior is affected.
+
+Do not edit generated files to make validation pass. Fix the owning
+specification or generator and regenerate the result.
+
+## 5. Feature Implementation Workflow
+
+Implement one complete feature slice at a time.
+
+Before changing code:
+
+1. read the owning feature specification, referenced data specifications, and
+   relevant decisions;
+2. inspect the installed ggaction guide, declarations, runtime entry point, and
+   relevant action cards;
+3. confirm the shortest complete public example;
+4. confirm the ordered action hierarchy and canonical resource owners;
+5. identify every lifecycle consumer affected by create, repeat, edit, remove,
+   data, Canvas, scale, or guide changes; and
+6. resolve every required upstream-core decision.
+
+Implement from the lowest stable responsibility upward:
+
+1. pure data conversion, grammar, geometry, or statistical calculations;
+2. independent literal oracles and invariants;
+3. semantic and graphical primitive baseline;
+4. new atomic extension actions;
+5. aggregate domain actions that call real reusable child actions;
+6. package exports, TypeScript declarations, and the supported extension
+   composition or registration surface;
+7. executable examples and public documentation; and
+8. complete contract and package-consumer verification.
+
+A high-level action must remain thin. It must call existing public actions when
+they own validation, inference, state, or materialization instead of copying
+their behavior.
+
+Validate the complete proposed result before returning the first changed
+program. A failed action must preserve the earlier program, trace, source data,
+caller-owned options, semantic state, and graphic state.
+
+When semantic state changes, explicitly update every affected graphical
+consumer. Repeated calls must not accumulate graphics or resources, and removed
+state must not reappear during later rematerialization.
+
+Keep the specification, implementation, exports, declarations, contracts,
+tests, examples, and documentation synchronized as one coherent user-facing
+change.
+
+## 6. Verification and Traceability
+
+Automated verification must evaluate the extension against its living
+specification, not only whether the code compiles.
+
+`npm run spec:validate` must verify at least:
+
+- every active data, feature, and decision specification is indexed;
+- every indexed specification exists and uses the required structure;
+- authoring templates are excluded from active indexes;
+- references between specifications resolve;
+- blocking decisions are not treated as resolved;
+- generated indexes match their canonical specifications; and
+- every testable requirement has a stable identifier.
+
+`npm run verify` must verify at least:
+
+- specification validation and generated traceability freshness;
+- deterministic data conversions and pure calculation invariants;
+- runtime behavior, public exports, and TypeScript declaration alignment;
+- action ownership, trace hierarchy, immutability, and atomic failure;
+- lifecycle behavior without stale or duplicate resources;
+- primitive-baseline and public-program equivalence;
+- every claimed renderer and representative visual contract;
+- executable examples and documentation references; and
+- consumption from the actual packed package rather than source-relative
+  imports.
+
+`spec/generated/traceability.json` must connect each testable requirement to its
+implementation, tests, examples, and documentation evidence. Missing,
+duplicated, stale, or unknown requirement links must fail validation.
+
+Automated checks must report one of three outcomes for each requirement:
+
+- `verified`: executable evidence passed;
+- `failed`: evidence ran and contradicted the requirement; or
+- `unverified`: no valid executable evidence exists.
+
+Do not report an unverified requirement as passed. Visual or product judgments
+that cannot be decided mechanically must remain explicit review gates with
+recorded user approval.
+
+Before declaring a meaningful change complete, run:
+
+```sh
+npm run spec:validate
+npm run verify
+npm pack --dry-run
+```
+
+Do not claim that a command passed unless it was actually run. Report every
+check that could not be completed and why.
+
+## 7. Decision Gates and Upstream Boundaries
+
+Stop dependent work and resolve the decision with the user before:
+
+- expanding the declared scope or removing a non-goal;
+- changing an accepted external data format or canonical representation;
+- changing a public action name, signature, default, error, ownership, or
+  lifecycle contract;
+- changing the supported ggaction version or compatibility range;
+- requiring a new ggaction semantic path, graphic primitive, renderer
+  capability, private action, or extension composition mechanism;
+- adding a runtime dependency, hosted service, account, telemetry, or network
+  requirement;
+- weakening deterministic generation, traceability, package-consumer evidence,
+  or required verification; or
+- publishing a package or deploying documentation.
+
+When the extension requires a ggaction core change, create or update a decision
+specification that records:
+
+- the extension requirement that cannot currently be implemented;
+- the installed public contract that establishes the limitation;
+- why existing public actions and primitives are insufficient;
+- the smallest proposed upstream contract;
+- compatibility and migration consequences; and
+- every extension feature blocked by the decision.
+
+Keep the core proposal separate from extension implementation. Do not
+monkey-patch shared prototypes, import private source files, duplicate internal
+materialization logic, or store renderer-specific objects to bypass the
+boundary.
+
+For minor, reversible implementation details inside an approved contract, choose
+the simplest option consistent with the specifications and installed ggaction
+knowledge. Record the assumption when it affects future maintenance.
+
+## 8. Change Workflow and Checkpoints
+
+Classify a requested change before implementation:
+
+- a specification change modifies intended public behavior, supported data,
+  scope, compatibility, or acceptance criteria;
+- an implementation change realizes an already approved specification without
+  changing its contract; and
+- an evidence change strengthens tests, examples, documentation, or
+  traceability without changing public behavior.
+
+When public behavior changes, update the owning specification and implementation
+in the same coherent conceptual change. Do not let code silently lead the
+specification or leave the specification describing behavior that no longer
+exists.
+
+Preserve unrelated user work. Do not combine a requested change with speculative
+refactoring, future features, dependency upgrades, or generated-file cleanup.
+
+Treat a change as meaningful when it alters:
+
+- a canonical specification or accepted decision;
+- a public action, data contract, export, declaration, or lifecycle;
+- generated traceability or validation behavior;
+- tests, examples, documentation, or package-consumer behavior; or
+- the durable workflow in this `AGENTS.md`.
+
+After each meaningful conceptual change:
+
+1. regenerate all derived files;
+2. run the narrowest relevant checks;
+3. run the complete required verification;
+4. inspect the final diff for unrelated or generated-only edits;
+5. commit only the files belonging to that change with a terse message; and
+6. push the current branch before beginning the next meaningful change.
+
+Do not create checkpoint commits for incomplete experiments or unverified
+output. Do not amend, squash, merge, publish, deploy, or delete remote branches
+without the required user authorization.
+
+At every checkpoint, report what changed, which commands actually passed, and
+which decisions or checks remain unresolved.
+
+## 9. Definition of Done
+
+A feature is complete only when:
+
+- every blocking decision is resolved;
+- the owning data and feature specifications are complete and indexed;
+- every testable requirement has current traceability evidence;
+- accepted external data converts deterministically into the canonical domain
+  representation;
+- reused and new actions match the approved action hierarchy and ownership;
+- runtime exports, TypeScript declarations, and action contracts agree;
+- valid calls preserve immutability and invalid calls fail atomically;
+- repeated and supported lifecycle calls leave no stale or duplicate resources;
+- the primitive baseline and public extension program satisfy their declared
+  equivalence;
+- every claimed renderer passes its semantic, structural, and representative
+  visual evidence;
+- runnable examples and public documentation describe the actual package;
+- an external consumer succeeds against the packed artifact;
+- no unresolved template placeholders or stale generated files remain; and
+- all required verification commands have actually passed.
+
+Repository completion additionally requires that a fresh installation can run:
+
+```sh
+npm install
+npm run spec:validate
+npm run verify
+npm pack --dry-run
+```
+
+A green renderer call, successful TypeScript compilation, or passing unit tests
+alone do not establish completion.
+
+If any required evidence is unavailable, report the feature as `unverified` or
+`blocked`, identify the exact missing contract, and do not describe it as
+complete.
