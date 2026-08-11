@@ -54,9 +54,11 @@ Maintain one canonical owner for each kind of information:
   upstream provenance, protected inventory, and declared adaptations. Its
   `files/` directory owns the protected repository-local snapshot copied into
   generated documentation.
-- The template manifest owns initialization defaults, variable definitions, and
-  scaffold-to-output mappings.
-- Initializer source owns rendering, validation, and filesystem behavior.
+- `template.json` owns the template version, conventional defaults, scaffold
+  root, and selected documentation profile. Keep it a small data file, not a
+  declarative validation or derivation language.
+- Initializer source owns input validation, value derivation, template-variable
+  construction, rendering conventions, output mapping, and filesystem behavior.
 - Tests own executable evidence that initialization and generated repositories
   satisfy their contracts.
 
@@ -110,7 +112,10 @@ The initializer must:
 - validate and normalize all initialization inputs before writing files;
 - derive conventional values from the domain unless an explicit supported
   override is provided;
-- render only scaffold-to-output mappings declared by the template manifest;
+- render only `.tmpl` files below the scaffold root declared by
+  `template.json`, preserving their relative paths and removing the `.tmpl`
+  suffix;
+- copy only protected documentation files declared by the selected profile;
 - resolve every required template variable and reject unknown or unresolved
   variables;
 - remove template-only suffixes such as `.tmpl` from emitted filenames;

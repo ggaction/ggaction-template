@@ -165,6 +165,12 @@ By default, the initializer derives the package name and output directory from
 the domain. For example, `geo` produces the package `ggaction-geo` in
 `./ggaction-geo`.
 
+The generated package starts at version `0.0.0`, uses the MIT license, and
+derives `https://github.com/ggaction/<package-name>` as its repository URL.
+An author is omitted unless supplied explicitly. These defaults come from the
+template manifest; validation and derivation logic remain ordinary initializer
+code rather than a manifest expression language.
+
 `--package`, `--output`, `--author`, `--repository`, `--license`, and
 `--ggaction-version` may be provided as optional overrides or metadata.
 
