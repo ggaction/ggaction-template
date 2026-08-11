@@ -1,0 +1,18 @@
+---
+layout: default
+title: Troubleshooting
+description: Diagnose extension registration, data, lifecycle, and rendering issues.
+---
+
+# Troubleshooting
+
+Troubleshooting entries use a consistent structure: observable symptom, likely
+cause, minimal public correction, and a supported inspection method. They must
+not depend on private ggaction source files or renderer internals.
+
+Before diagnosing a feature, confirm the installed package versions and run:
+
+```sh
+npm run spec:validate
+npm run verify
+```

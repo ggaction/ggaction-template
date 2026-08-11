@@ -1,0 +1,26 @@
+title: "{{packageName}}"
+description: {{descriptionYaml}}
+domain: "{{domain}}"
+version: "{{packageVersion}}"
+npm_package: "{{packageName}}"
+repository_url: "{{repositoryUrl}}"
+license: "{{license}}"
+url: ""
+baseurl: ""
+lang: en
+social_image: ""
+theme: minima
+markdown: kramdown
+permalink: pretty
+plugins:
+  - jekyll-relative-links
+  - jekyll-sitemap
+relative_links:
+  enabled: true
+  collections: true
+exclude:
+  - README.md
+  - AGENTS.md
+  - _templates
+  - profile.json
+  - profile-lock.json
