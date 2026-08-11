@@ -1,0 +1,303 @@
+# Extension Repository Instructions
+
+## 1. Mission and Specification Authority
+
+This repository develops and maintains `{{packageName}}`, the `{{domain}}`
+extension package for ggaction.
+
+The active specifications under `spec/` are the canonical contracts for the
+extension's public behavior. Read `spec/SPEC.md` and every relevant data,
+feature, and decision specification before changing public behavior or starting
+dependent implementation.
+
+This `AGENTS.md` governs how agents collaborate with the user, maintain the
+specifications, implement the extension, and verify alignment. It must not
+duplicate exact feature, action, data, or decision contracts owned by `spec/`.
+
+If requested work conflicts with an active specification or expands its stated
+scope, surface the conflict and resolve it with the user before implementation.
+
+## 2. Collaborative Specification Interview
+
+First classify the interview as one of:
+
+- `bootstrap`: define a new extension and its first feature;
+- `feature`: add one new visualization to an existing extension; or
+- `change`: update only the specifications affected by a requested change.
+
+Do not restart the complete interview when the existing specifications already
+answer a question.
+
+### Discovery Pass
+
+Ask only for user-visible intent:
+
+- the visualization users should be able to create;
+- relevant standards, papers, datasets, or visual references;
+- expected input data;
+- required variants; and
+- explicit exclusions.
+
+Do not ask the user to design actions, materialization, trace structure, module
+ownership, or tests.
+
+### Contract Pass
+
+After discovery:
+
+1. Research current ggaction public actions and extension contracts.
+2. Identify reusable ggaction behavior before proposing new actions.
+3. Draft the relevant data contracts, feature contract, three examples, and
+   acceptance criteria.
+4. Separate agent-derived implementation details from unresolved user-visible
+   decisions.
+5. Present a recommended contract and ask about one unresolved decision at a
+   time.
+6. Record each answer in its canonical specification immediately.
+
+Questions must be concise and include a recommendation. Present alternatives
+only when they create meaningful user-visible differences.
+
+### Completion
+
+Before proposing `ready` status, summarize:
+
+- the agreed scope and non-goals;
+- active data contracts;
+- features and new public actions;
+- the three examples for each feature;
+- acceptance criteria;
+- remaining `SPEC-TODO` markers; and
+- open decisions.
+
+Mark a specification `ready` only after its required decisions are resolved,
+its required sections are complete, and the user approves the final summary.
+
+## 3. Specification Structure and Ownership
+
+Maintain one canonical owner for each kind of product information:
+
+- `spec/SPEC.md` owns project purpose, scope, non-goals, domain vocabulary,
+  package behavior, feature membership, architecture boundaries,
+  repository-wide acceptance criteria, and open-decision membership.
+- `spec/data/*.md` owns accepted external data formats, canonical domain
+  representations, deterministic conversion rules, validation, and provenance.
+- `spec/features/*.md` owns one visualization family, its supported variants,
+  data requirements, reused and new actions, three examples, and observable
+  acceptance criteria.
+- `spec/decisions/*.md` owns the context, options, resolution, and consequences
+  of one product or architecture decision.
+- `spec/_templates/*.md` provides authoring forms and is not an active
+  specification.
+- `spec/generated/*` contains derived indexes and traceability evidence and
+  must not be edited manually.
+
+Do not duplicate an exact contract across multiple specifications. Link to its
+canonical owner instead. In particular, feature specifications reference data
+contracts rather than redefining their formats.
+
+Source code, tests, examples, generated indexes, and documentation are
+implementations or evidence of the active specifications. They do not silently
+replace or override the owning specification.
+
+When a fact appears to have multiple owners or the specification conflicts with
+observable implementation behavior, surface and resolve the conflict before
+continuing.
+
+## 4. Specification Status Gates
+
+Project, data, and feature specifications use:
+
+- `draft`: the contract is incomplete, unresolved, or being revised;
+- `ready`: the contract is complete and approved for implementation; and
+- `verified`: the implementation and required evidence satisfy the ready
+  contract.
+
+Decision specifications use:
+
+- `open`: no option has been approved; and
+- `accepted`: the selected option, rationale, and consequences are recorded.
+
+A specification may be `ready` only when:
+
+- every required section is complete;
+- no unresolved `SPEC-TODO` remains;
+- every referenced data contract is `ready` or `verified`;
+- every referenced decision is `accepted`;
+- public behavior, examples, and acceptance criteria are concrete; and
+- the user has approved the final contract summary.
+
+A specification may be `verified` only when:
+
+- it already satisfies every `ready` condition;
+- code, types, tests, examples, and public documentation are aligned;
+- every acceptance criterion has executable evidence;
+- generated indexes and traceability are current; and
+- all required verification commands pass.
+
+Do not implement behavior owned by a `draft` specification. Agent-derived
+research, proposals, and specification edits are allowed while it remains
+`draft`.
+
+Before changing verified public behavior, return the owning specification to
+`draft`, complete the focused interview, and obtain `ready` approval again.
+Implementation-only refactoring may preserve `verified` status when observable
+behavior is unchanged and complete verification passes.
+
+## 5. ggaction Reuse and Extension Boundaries
+
+Before proposing or implementing a new extension action:
+
+1. Inspect the supported ggaction version's public actions, types, extension
+   contracts, and documented behavior.
+2. Identify existing actions, semantic resources, graphic primitives,
+   rematerialization policies, and renderers that already own part of the
+   required behavior.
+3. Reuse those owners and limit the new action to domain behavior that ggaction
+   does not already provide.
+4. Record the reuse and the remaining extension responsibility in the owning
+   feature specification.
+
+Extension packages must:
+
+- register actions at package import time only through the public
+  `registerExtension()` API;
+- use `ggaction` as a compatible peer dependency;
+- augment the public `ChartProgram` TypeScript type;
+- preserve all existing ggaction actions and program behavior;
+- reject registration collisions atomically;
+- remain independent of extension import order; and
+- keep public terminology source-neutral.
+
+Extension packages must not:
+
+- export a replacement `chart()` function;
+- recreate or wrap existing ggaction renderers;
+- import private `ggaction/src/...` modules;
+- patch ggaction prototypes outside the public registration API;
+- rename existing ggaction behavior and present it as a new extension action; or
+- hide a required core API, graphic primitive, or renderer change behind a
+  local workaround.
+
+When existing ggaction behavior is insufficient, keep the affected feature
+`draft`, record an open decision, and ask the user only about the externally
+visible tradeoff.
+
+## 6. Implementation and Synchronization Workflow
+
+Classify each requested change before implementation:
+
+- `contract`: changes user-visible behavior or a specification;
+- `implementation`: preserves the approved contract; or
+- `evidence`: changes tests, examples, documentation, or generated traceability
+  without changing behavior.
+
+For a contract change:
+
+1. Return the owning specification to `draft`.
+2. Run the focused specification interview.
+3. Obtain `ready` approval.
+4. Implement one coherent feature or behavior change.
+5. Derive internal module structure, materialization, trace construction, and
+   tests from current ggaction architecture.
+6. Keep runtime code, TypeScript augmentation, specifications, tests, examples,
+   and documentation aligned.
+7. Regenerate derived indexes and traceability.
+8. Run complete verification before marking the specification `verified`.
+
+Extension actions must use the public ggaction action wrapper, return the same
+concrete `ChartProgram` type, preserve previous programs and caller-owned input,
+and record meaningful trace hierarchy. Keep wrapped action orchestration
+separate from pure domain calculations and graphical materialization.
+
+If implementation reveals an unresolved public behavior, stop dependent work,
+return the owning specification to `draft`, and resolve it with the user. Do not
+hide the gap in an implementation default or undocumented fallback.
+
+For implementation-only changes, preserve observable behavior and prove that
+preservation through complete verification. For evidence changes, keep the
+canonical specification unchanged unless the evidence exposes a real contract
+conflict.
+
+Implement one coherent conceptual change at a time and preserve unrelated user
+work.
+
+## 7. Verification and Completion
+
+Run the narrowest relevant checks while developing, then run the complete
+verification workflow before declaring a change complete.
+
+Specification verification must confirm:
+
+- required frontmatter and allowed status values;
+- exact agreement between project indexes and active specification files;
+- no unresolved `SPEC-TODO` in `ready` or `verified` specifications;
+- valid references to data contracts and decisions;
+- deterministic conversion from every accepted data format to its canonical
+  representation;
+- exactly three complete examples for each feature;
+- existence of every reused ggaction action in the supported version; and
+- no public action-name collision.
+
+Implementation verification must cover:
+
+- pure domain calculations;
+- action state, immutability, and trace behavior;
+- import-time registration, duplicate registration, collision rejection, and
+  extension import-order independence;
+- JavaScript and TypeScript public-surface agreement;
+- execution and type checking of all feature examples;
+- required Canvas, SVG, PNG, and PDF rendering evidence;
+- packed-package consumption using only public imports; and
+- every specification acceptance criterion.
+
+Generated indexes and `traceability.json` must be current and connect each
+active specification and acceptance-criterion ID to its implementation and
+evidence.
+
+Before marking work complete, run:
+
+```sh
+npm run spec:validate
+npm run verify
+npm pack --dry-run
+```
+
+Do not mark a specification `verified` or claim a check passed unless the
+required command actually succeeded. Report every check that was not run or
+could not be completed.
+
+## 8. Decision Gates
+
+Resolve the following with the user before dependent implementation:
+
+- project purpose, scope, or non-goals;
+- supported visualization variants and user-visible limitations;
+- accepted external data formats, canonical representations, lossy conversion,
+  ambiguity handling, or identifier semantics;
+- new public action names, signatures, defaults, inference, errors, or removal
+  behavior;
+- additional public exports;
+- externally visible behavior that conflicts with a cited standard or
+  reference;
+- a new runtime dependency or compatibility requirement;
+- a ggaction core API, graphic primitive, renderer, or registration-contract
+  change; or
+- weakening an acceptance criterion, deterministic behavior, traceability, or
+  required verification.
+
+Create or update a decision specification when a choice is public,
+architectural, difficult to reverse, or affects multiple features. Keep every
+dependent specification `draft` until the decision is `accepted`.
+
+Do not ask the user to decide:
+
+- internal file or module layout;
+- private helper names;
+- materialization details that follow directly from existing ggaction behavior;
+- trace decomposition that follows existing action conventions; or
+- test organization needed to prove approved acceptance criteria.
+
+For minor and reversible implementation choices within an approved contract,
+choose the simplest option consistent with ggaction, record a maintenance
+assumption only when useful, and continue.
