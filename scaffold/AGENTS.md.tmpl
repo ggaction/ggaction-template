@@ -225,7 +225,76 @@ npm pack --dry-run
 Do not claim that a command passed unless it was actually run. Report every
 check that could not be completed and why.
 
-## 7. Decision Gates and Upstream Boundaries
+## 7. Documentation Compatibility Profile
+
+Maintain public documentation together with the specification, implementation,
+types, tests, and examples that establish the same behavior.
+
+This repository uses the versioned `ggaction-docs-v1` compatibility profile.
+`docs/profile.json` selects the profile and version. `docs/profile-lock.json` is
+generated evidence that records the pinned ggaction source and hashes of every
+profile-owned file. Do not edit the lock manually or fetch documentation shell
+files from a mutable GitHub branch.
+
+Treat `package.json` as the canonical source for the package name, description,
+version, and repository used in documentation branding. Preserve the profile's
+Jekyll layout, `_data/pages.yml` navigation model, includes, `docs-*` styling,
+search behavior, LLM metadata, responsive behavior, and accessibility
+conventions. Package branding may change. Do not silently fork the shared
+layout, components, spacing, or interaction behavior.
+
+Extension documentation owns extension behavior only. Link to documentation for
+the installed ggaction version when explaining core actions or semantics. Do
+not copy core documentation into this repository or claim behavior that exists
+only on another version or a mutable upstream branch.
+
+Use the authoring aids under `docs/_templates/` when adding recipes, tutorials,
+or API pages. They must remain excluded from navigation, search, and LLM-facing
+output. `_data/pages.yml` is the single canonical navigation source.
+
+For each implemented feature:
+
+1. keep one canonical executable program at
+   `examples/<feature>/program.js`;
+2. reuse that program for tests, tutorial or recipe code, and representative
+   rendered evidence instead of maintaining drifting copies;
+3. provide the applicable recipe, API or reference documentation and a
+   representative render;
+4. add a tutorial when the feature requires an ordered learning workflow;
+5. document public inputs, defaults, inference, state ownership, lifecycle,
+   errors, and limitations where they are observable; and
+6. connect the documentation and example evidence to the owning requirements in
+   generated traceability.
+
+Run `npm run docs:generate` after changing an owning specification, public API,
+canonical example, navigation entry, or authored documentation. It may update
+only deterministic derived documentation. It must not rewrite authored pages,
+profile-owned shell files, or `docs/profile-lock.json`.
+
+Before declaring documentation aligned, run:
+
+```sh
+npm run docs:profile:check
+npm run docs:generate -- --check
+npm run docs:verify
+```
+
+`docs:profile:check` must reject a profile or version mismatch, missing or
+changed protected files, unexpected files under protected roots, unsafe or
+duplicate lock paths, unresolved template variables, invalid Jekyll settings,
+multiple navigation sources, or leaked authoring templates.
+
+`docs:verify` must build in a temporary directory without changing authored
+source, validate generated freshness, links, anchors, assets, search entries,
+and representative images, exercise documented examples through the public
+package, and check desktop and mobile navigation, keyboard focus, responsive
+behavior, and baseline accessibility.
+
+Changing the documentation profile version, its protected shell, or its
+compatibility contract requires an explicit decision and built-site evidence.
+Do not regenerate the lock merely to accept an unexplained profile difference.
+
+## 8. Decision Gates and Upstream Boundaries
 
 Stop dependent work and resolve the decision with the user before:
 
@@ -261,7 +330,7 @@ For minor, reversible implementation details inside an approved contract, choose
 the simplest option consistent with the specifications and installed ggaction
 knowledge. Record the assumption when it affects future maintenance.
 
-## 8. Change Workflow and Checkpoints
+## 9. Change Workflow and Checkpoints
 
 Classify a requested change before implementation:
 
@@ -304,7 +373,7 @@ without the required user authorization.
 At every checkpoint, report what changed, which commands actually passed, and
 which decisions or checks remain unresolved.
 
-## 9. Definition of Done
+## 10. Definition of Done
 
 A feature is complete only when:
 
