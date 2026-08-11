@@ -1,0 +1,171 @@
+---
+version: 1
+package: "{{packageName}}"
+domain: "{{domain}}"
+status: draft
+ggactionVersion: "{{ggactionVersion}}"
+---
+
+# {{packageName}} Specification
+
+## 1. Purpose
+
+### Problem
+
+<!-- SPEC-TODO: Describe the visualization problem this extension addresses. -->
+
+### Intended Outcome
+
+<!-- SPEC-TODO: Describe the new kinds of visualizations users will be able to
+create. Do not list individual actions here. -->
+
+### Relationship to ggaction
+
+<!-- SPEC-TODO: Explain why this belongs in an extension package and what
+existing ggaction foundation it builds upon. -->
+
+## 2. Scope
+
+<!-- SPEC-TODO: List what this extension will support. Keep each item concrete. -->
+
+This extension supports:
+
+- ...
+
+### References
+
+<!-- SPEC-TODO: Add papers, specifications, libraries, examples, or visual
+references that help define the intended scope. Explain why each reference is
+relevant, or write `None`. -->
+
+## 3. Non-goals
+
+<!-- SPEC-TODO: List what this extension intentionally will not support.
+Include a short reason when the exclusion may otherwise be surprising. -->
+
+This extension does not support:
+
+- ...
+
+## 4. Domain Model
+
+<!-- SPEC-TODO: Define only the domain concepts that users will encounter in
+data, options, actions, or observable program state. -->
+
+| Term | Meaning | ggaction Representation |
+| --- | --- | --- |
+| ... | ... | ... |
+
+### Data Contract Index
+
+<!-- SPEC-TODO: List every active data contract under `data/`. -->
+
+| ID | Data | Specification |
+| --- | --- | --- |
+| ... | ... | ... |
+
+## 5. Public Package Contract
+
+Users import `chart()` from `ggaction` and import this package to register its
+extension actions.
+
+```javascript
+import { chart } from "ggaction";
+import "{{packageName}}";
+
+const program = chart();
+```
+
+Importing `{{packageName}}` must call the public `registerExtension()` API from
+`ggaction/extension`. After registration, every program created by `chart()`
+includes the extension actions defined by this specification.
+
+Multiple extension packages may be imported together.
+
+```javascript
+import { chart } from "ggaction";
+import "ggaction-geo";
+import "ggaction-hierarchy";
+
+const program = chart()
+  .createGeoPlot({})
+  .createTreeLayout({});
+```
+
+The package must:
+
+- register only the public actions defined in its feature specifications;
+- augment the public `ChartProgram` TypeScript type with those actions;
+- use `ggaction` as a compatible peer dependency;
+- preserve all existing ggaction actions;
+- reject extension or action-name collisions before registering any action; and
+- avoid depending on extension import order.
+
+The package does not export its own `chart()` function and does not recreate or
+wrap ggaction renderers. Rendering continues to use the existing public
+ggaction renderer entries.
+
+### Additional Exports
+
+<!-- SPEC-TODO: List any additional public values or types exported by this
+extension, or write `None`. -->
+
+## 6. Feature Index
+
+<!-- SPEC-TODO: List each new kind of visualization provided by this extension.
+Every entry must link to exactly one document under `features/`. -->
+
+| ID | Visualization | Specification |
+| --- | --- | --- |
+| ... | ... | ... |
+
+## 7. Architecture Boundaries
+
+This extension must:
+
+- register its actions at package import time through the public
+  `registerExtension()` API;
+- use only public ggaction package entries;
+- preserve `ChartProgram` immutability and meaningful action traces;
+- keep action orchestration, pure domain calculations, and graphical
+  materialization separate;
+- explicitly materialize graphical changes made by domain actions;
+- reuse existing ggaction actions, semantic resources, graphic primitives, and
+  renderers whenever they already own the required behavior; and
+- avoid modifying or recreating ggaction core behavior.
+
+A feature that requires a new ggaction core API, graphic primitive, or renderer
+must remain `draft` and record an open decision instead of implementing a local
+workaround.
+
+### Domain-specific Boundaries
+
+<!-- SPEC-TODO: List additional architecture boundaries specific to this
+extension, or write `None`. -->
+
+## 8. Repository-wide Acceptance Criteria
+
+| ID | Criterion |
+| --- | --- |
+| REPO-ACC-001 | `npm run spec:validate` passes with no unresolved `SPEC-TODO` in any `ready` or `verified` specification. |
+| REPO-ACC-002 | Importing the package registers every specified extension action on programs returned by `chart()` from `ggaction`. |
+| REPO-ACC-003 | Extension-name or action-name collisions fail before any action is partially registered. |
+| REPO-ACC-004 | Registration preserves all existing ggaction actions and does not depend on extension import order. |
+| REPO-ACC-005 | JavaScript exports and TypeScript module augmentation describe the same public surface. |
+| REPO-ACC-006 | Every indexed feature satisfies its own acceptance criteria and has executable example coverage. |
+| REPO-ACC-007 | The packed package passes consumer tests using only public package imports. |
+| REPO-ACC-008 | `npm run verify` and `npm pack --dry-run` succeed. |
+
+### Extension-specific Acceptance Criteria
+
+<!-- SPEC-TODO: Add repository-wide criteria specific to this extension, or
+write `None`. -->
+
+## 9. Open Decisions
+
+<!-- SPEC-TODO: List unresolved product or architecture decisions, or write
+`None`. Each decision must link to a document under `decisions/`. -->
+
+| ID | Question | Decision Record |
+| --- | --- | --- |
+| ... | ... | ... |

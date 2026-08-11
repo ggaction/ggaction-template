@@ -1,0 +1,206 @@
+---
+version: 1
+id: FEATURE-ID
+status: draft
+decisions: []
+---
+
+# Feature Title
+
+## 1. Visualization
+
+<!-- SPEC-TODO: Describe the visualization in plain language. Explain what the
+visual elements represent and what users can learn from the result. Do not
+describe actions or implementation details here. -->
+
+## 2. Variants
+
+### Supported
+
+<!-- SPEC-TODO: List the supported forms of this visualization. -->
+
+- ...
+
+### Not Supported
+
+<!-- SPEC-TODO: List intentionally unsupported forms, or write `None`. Include
+a short reason when the exclusion may be surprising. -->
+
+- ...
+
+## 3. Data Requirements
+
+<!-- SPEC-TODO: Reference the active data contracts required or optionally
+supported by this visualization. Do not redefine their formats here. -->
+
+| Data Contract | Required | Role |
+| --- | --- | --- |
+| ... | ... | ... |
+
+### Feature-specific Constraints
+
+<!-- SPEC-TODO: List only constraints unique to this visualization, or write
+`None`. -->
+
+## 4. Action Design
+
+### Reused ggaction Actions
+
+<!-- SPEC-TODO: List existing public ggaction actions used to author this
+visualization. Do not list an action unless it has a concrete role. -->
+
+| Action | Role |
+| --- | --- |
+| ... | ... |
+
+### New Extension Actions
+
+<!-- SPEC-TODO: List only behavior that existing ggaction actions cannot own. -->
+
+| Action | Purpose |
+| --- | --- |
+| ... | ... |
+
+#### `newExtensionAction`
+
+##### Signature
+
+```typescript
+newExtensionAction(options: NewExtensionActionOptions): ChartProgram;
+```
+
+##### Inputs
+
+| Option | Required | Type | Meaning |
+| --- | --- | --- | --- |
+| ... | ... | ... | ... |
+
+##### Defaults
+
+- ...
+
+##### Inference
+
+- ...
+
+##### Reused Actions
+
+- ...
+
+##### Effects
+
+###### Semantic
+
+- ...
+
+###### Graphical
+
+- ...
+
+###### Trace
+
+- ...
+
+##### Errors
+
+- ...
+
+## 5. Examples
+
+### FEATURE-ID-EX-001 Minimal
+
+#### Input
+
+```json
+{}
+```
+
+#### Program
+
+```javascript
+import { chart, render } from "ggaction";
+import "{{packageName}}";
+
+const program = chart()
+  .createCanvas()
+  .createData({ values });
+
+render(program, context);
+```
+
+#### Expected Result
+
+<!-- SPEC-TODO: Describe the visible result and what its important elements
+represent. -->
+
+### FEATURE-ID-EX-002 Representative
+
+#### Input
+
+```json
+{}
+```
+
+#### Program
+
+```javascript
+import { chart, render } from "ggaction";
+import "{{packageName}}";
+
+const program = chart()
+  .createCanvas()
+  .createData({ values });
+
+render(program, context);
+```
+
+#### Expected Result
+
+<!-- SPEC-TODO: Describe the visible result and what its important elements
+represent. -->
+
+### FEATURE-ID-EX-003 Integration
+
+#### Input
+
+```json
+{}
+```
+
+#### Program
+
+```javascript
+import { chart, render } from "ggaction";
+import "{{packageName}}";
+
+const program = chart()
+  .createCanvas()
+  .createData({ values });
+
+render(program, context);
+```
+
+#### Expected Result
+
+<!-- SPEC-TODO: Describe the visible result and what its important elements
+represent. -->
+
+## 6. Acceptance Criteria
+
+<!-- AGENT-MAINTAINED: Derive testable criteria from the approved visualization,
+variants, data contracts, action design, and examples. Ask the user only when an
+externally visible behavior remains ambiguous. -->
+
+| ID | Criterion |
+| --- | --- |
+| FEATURE-ID-ACC-001 | ... |
+
+## 7. References
+
+<!-- Add standards, papers, datasets, or visual examples that inform this
+feature. Explain what each reference contributes. Write `None` if there are no
+references. -->
+
+| Reference | Type | Relevance |
+| --- | --- | --- |
+| ... | ... | ... |
