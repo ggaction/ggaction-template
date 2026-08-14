@@ -171,6 +171,14 @@ An author is omitted unless supplied explicitly. These defaults come from the
 template manifest; validation and derivation logic remain ordinary initializer
 code rather than a manifest expression language.
 
+The template manifest also pins the newest ggaction range verified with that
+template release. Version 1 currently defaults to `^0.0.10`, the first release
+that provides the required public extension registration API. The initializer
+must not query the npm `latest` tag while generating a repository. A newer
+verified ggaction default is delivered through a newer template release so the
+same template version and normalized inputs continue to produce the same
+source.
+
 `--package`, `--output`, `--author`, `--repository`, `--license`, and
 `--ggaction-version` may be provided as optional overrides or metadata.
 
