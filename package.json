@@ -4,6 +4,16 @@
   "description": "Specification-driven initializer for ggaction extensions",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "create-ggaction-extension": "bin/create-ggaction-extension.js"
+  },
+  "files": [
+    "bin",
+    "profiles",
+    "scaffold",
+    "src",
+    "template.json"
+  ],
   "engines": {
     "node": ">=20"
   },
