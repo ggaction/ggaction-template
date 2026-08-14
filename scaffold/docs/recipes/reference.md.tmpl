@@ -1,0 +1,28 @@
+---
+layout: default
+title: Reference Graphic
+description: Verify that the generated extension registers and renders.
+---
+
+# Create the reference graphic
+
+Importing `{{packageName}}` registers `{{referenceActionName}}()` on ggaction's
+complete chart program.
+
+```javascript
+import { chart } from "ggaction";
+import { renderToSVG } from "ggaction/svg";
+import "{{packageName}}";
+
+const program = chart()
+  .createCanvas({ width: 160, height: 120 })
+  .{{referenceActionName}}();
+
+const svg = renderToSVG(program);
+```
+
+The result is one blue circle. Customize `id`, `x`, `y`, `radius`, or `fill`
+without introducing a renderer owned by the extension.
+
+The executable source is [examples/reference/program.js](../../examples/reference/program.js),
+and the normative behavior is [REF](../../spec/features/reference.md).

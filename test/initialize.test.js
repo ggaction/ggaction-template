@@ -73,7 +73,7 @@ test("initializes a repository from the canonical template", async (t) => {
 
   assert.deepEqual(result, {
     outputDirectory: output,
-    fileCount: 51,
+    fileCount: 65,
     packageName: "ggaction-geo",
     domain: "geo",
   });
@@ -87,13 +87,33 @@ test("initializes a repository from the canonical template", async (t) => {
   );
 
   const files = await readTree(output);
-  assert.equal(files.length, 51);
+  assert.equal(files.length, 65);
   assert.ok(files.every((entry) => !entry.path.endsWith(".tmpl")));
   for (const entry of files) {
     if (entry.path === "docs/profile-lock.json") continue;
     const text = entry.content.toString("utf8");
-    assert.doesNotMatch(text, /\{\{(?:packageName|domain|descriptionYaml|packageVersion|repositoryUrl|license|ggactionVersion|docsProfile|docsProfileVersion)\}\}/);
+    assert.doesNotMatch(text, /\{\{[A-Za-z][A-Za-z0-9]*\}\}/);
   }
+});
+
+test("renders optional package authors as JSON data", async (t) => {
+  const root = await sandbox(t);
+  await initializeRepository(
+    [
+      "--domain=geo",
+      "--description=Geo actions",
+      '--author=Example "Maintainer"',
+    ],
+    { cwd: root },
+  );
+
+  const packageJson = JSON.parse(
+    await fileSystem.readFile(
+      join(root, "ggaction-geo", "package.json"),
+      "utf8",
+    ),
+  );
+  assert.equal(packageJson.author, 'Example "Maintainer"');
 });
 
 test("writes a lock matching every copied documentation profile file", async (t) => {

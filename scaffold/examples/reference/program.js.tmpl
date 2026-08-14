@@ -1,0 +1,12 @@
+import { chart } from "ggaction";
+import { renderToSVG } from "ggaction/svg";
+import "{{packageName}}";
+
+export const program = chart()
+  .createCanvas({ width: 160, height: 120 })
+  .{{referenceActionName}}();
+
+export const svg = renderToSVG(program, {
+  title: "{{domainPascalCase}} extension reference",
+  description: "The executable reference graphic for {{packageName}}."
+});

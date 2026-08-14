@@ -1,0 +1,22 @@
+import type { ChartProgram } from "ggaction";
+
+export interface {{referenceOptionsName}} extends Record<string, unknown> {
+  id?: string;
+  x?: number;
+  y?: number;
+  radius?: number;
+  fill?: string;
+}
+
+export declare const {{referenceActionName}}Action: <
+  TProgram extends ChartProgram
+>(
+  this: TProgram,
+  options?: {{referenceOptionsName}}
+) => TProgram;
+
+declare module "ggaction/extension" {
+  interface RegisteredExtensionActions {
+    {{referenceActionName}}: typeof {{referenceActionName}}Action;
+  }
+}

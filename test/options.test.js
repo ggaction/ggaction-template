@@ -29,6 +29,7 @@ test("derives conventional values from the required inputs", () => {
     license: "MIT",
     packageVersion: "0.0.0",
     ggactionVersion: "^0.0.10",
+    typescriptVersion: "7.0.2",
   });
 });
 
@@ -68,6 +69,7 @@ test("applies every supported override", () => {
     license: "Apache-2.0",
     packageVersion: "0.0.0",
     ggactionVersion: "~0.0.10",
+    typescriptVersion: "7.0.2",
   });
 });
 

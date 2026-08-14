@@ -62,7 +62,7 @@ data, options, actions, or observable program state. -->
 
 | ID | Data | Specification |
 | --- | --- | --- |
-| ... | ... | ... |
+| None | The executable reference feature requires no input data. | — |
 
 ## 5. Public Package Contract
 
@@ -107,8 +107,10 @@ ggaction renderer entries.
 
 ### Additional Exports
 
-<!-- SPEC-TODO: List any additional public values or types exported by this
-extension, or write `None`. -->
+| Export | Kind | Purpose |
+| --- | --- | --- |
+| `{{referenceActionName}}Action` | Action | Direct access to the executable reference action. |
+| `{{referenceOptionsName}}` | Type | Options accepted by the reference action. |
 
 ## 6. Feature Index
 
@@ -117,7 +119,7 @@ Every entry must link to exactly one document under `features/`. -->
 
 | ID | Visualization | Specification |
 | --- | --- | --- |
-| ... | ... | ... |
+| REF | Reference registration graphic | [features/reference.md](features/reference.md) |
 
 ## 7. Architecture Boundaries
 
@@ -161,6 +163,8 @@ extension, or write `None`. -->
 <!-- SPEC-TODO: Add repository-wide criteria specific to this extension, or
 write `None`. -->
 
+None.
+
 ## 9. Open Decisions
 
 <!-- SPEC-TODO: List unresolved product or architecture decisions, or write
@@ -168,4 +172,4 @@ write `None`. -->
 
 | ID | Question | Decision Record |
 | --- | --- | --- |
-| ... | ... | ... |
+| None | No open decision is required for the executable reference feature. | — |
