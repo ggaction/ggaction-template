@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import * as fileSystem from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const root = process.cwd();
+const sandbox = await fileSystem.mkdtemp(join(tmpdir(), "{{packageName}}-consumer-"));
+
+async function run(command, args, options = {}) {
+  return execFileAsync(command, args, {
+    maxBuffer: 10 * 1024 * 1024,
+    ...options
+  });
+}
+
+try {
+  const packed = await run(
+    "npm",
+    ["pack", "--json", "--pack-destination", sandbox],
+    { cwd: root }
+  );
+  const [metadata] = JSON.parse(packed.stdout);
+  const archive = resolve(sandbox, metadata.filename);
+  const paths = metadata.files.map(file => file.path);
+  assert.deepEqual(
+    paths.filter(path => path.startsWith("src/")).sort(),
+    ["src/actions/reference.js", "src/index.js"]
+  );
+  assert.ok(paths.includes("types/index.d.ts"));
+  assert.ok(!paths.some(path => path.startsWith("test/") || path.startsWith("spec/") || path.startsWith("docs/")));
+
+  const consumer = resolve(sandbox, "consumer");
+  await fileSystem.mkdir(consumer);
+  await run(
+    "npm",
+    [
+      "install",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      archive,
+      "typescript@{{typescriptVersion}}"
+    ],
+    { cwd: consumer }
+  );
+
+  await fileSystem.writeFile(
+    resolve(consumer, "runtime.mjs"),
+    `import assert from "node:assert/strict";
+import { chart } from "ggaction";
+import { renderToSVG } from "ggaction/svg";
+import "{{packageName}}";
+
+const before = chart().createCanvas({ width: 160, height: 120 });
+const after = before.{{referenceActionName}}({ fill: "#16a34a" });
+assert.equal(before.graphicSpec.objects["{{referenceGraphicId}}"], undefined);
+assert.equal(after.graphicSpec.objects["{{referenceGraphicId}}"].type, "circle");
+assert.match(renderToSVG(after), /fill="#16a34a"/);
+`
+  );
+  await fileSystem.writeFile(
+    resolve(consumer, "consumer.ts"),
+    `import { chart } from "ggaction";
+import "{{packageName}}";
+import type { {{referenceOptionsName}} } from "{{packageName}}";
+
+const options: {{referenceOptionsName}} = { radius: 12 };
+const program = chart().{{referenceActionName}}(options);
+program.{{referenceActionName}}({ fill: "#16a34a" });
+`
+  );
+  await fileSystem.writeFile(
+    resolve(consumer, "tsconfig.json"),
+    `${JSON.stringify({
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+        strict: true,
+        noEmit: true
+      },
+      include: ["consumer.ts"]
+    }, null, 2)}\n`
+  );
+
+  await run(process.execPath, [resolve(consumer, "runtime.mjs")], { cwd: consumer });
+  await run(
+    process.execPath,
+    [resolve(consumer, "node_modules/typescript/bin/tsc"), "--project", "tsconfig.json"],
+    { cwd: consumer }
+  );
+  console.log(`Packed consumer verified ${metadata.name}@${metadata.version} through public imports.`);
+} finally {
+  await fileSystem.rm(sandbox, { recursive: true, force: true });
+}

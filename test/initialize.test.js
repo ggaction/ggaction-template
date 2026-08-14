@@ -73,7 +73,7 @@ test("initializes a repository from the canonical template", async (t) => {
 
   assert.deepEqual(result, {
     outputDirectory: output,
-    fileCount: 83,
+    fileCount: 85,
     packageName: "ggaction-geo",
     domain: "geo",
   });
@@ -87,7 +87,7 @@ test("initializes a repository from the canonical template", async (t) => {
   );
 
   const files = await readTree(output);
-  assert.equal(files.length, 83);
+  assert.equal(files.length, 85);
   assert.ok(files.every((entry) => !entry.path.endsWith(".tmpl")));
   for (const entry of files) {
     if (entry.path === "docs/profile-lock.json") continue;
