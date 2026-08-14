@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+const npmEnvironment = {
+  ...process.env,
+  npm_config_dry_run: "false",
+};
 
 test("the packed initializer produces a fully verified extension repository", {
   timeout: 120_000,
@@ -19,7 +23,7 @@ test("the packed initializer produces a fully verified extension repository", {
   const packed = await execFileAsync(
     "npm",
     ["pack", "--json", "--pack-destination", root],
-    { cwd: repositoryRoot },
+    { cwd: repositoryRoot, env: npmEnvironment },
   );
   const [metadata] = JSON.parse(packed.stdout);
   const archive = join(root, metadata.filename);
@@ -37,7 +41,7 @@ test("the packed initializer produces a fully verified extension repository", {
   await execFileAsync(
     "npm",
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive],
-    { cwd: consumer },
+    { cwd: consumer, env: npmEnvironment },
   );
   const executable = join(
     consumer,
@@ -63,19 +67,19 @@ test("the packed initializer produces a fully verified extension repository", {
   await execFileAsync(
     "npm",
     ["install", "--no-audit", "--no-fund"],
-    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+    { cwd: extension, env: npmEnvironment, maxBuffer: 10 * 1024 * 1024 },
   );
   const specification = await execFileAsync(
     "npm",
     ["run", "spec:validate"],
-    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+    { cwd: extension, env: npmEnvironment, maxBuffer: 10 * 1024 * 1024 },
   );
   assert.match(specification.stdout, /generated evidence are current/);
 
   const verification = await execFileAsync(
     "npm",
     ["run", "verify"],
-    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+    { cwd: extension, env: npmEnvironment, maxBuffer: 10 * 1024 * 1024 },
   );
   assert.match(
     verification.stdout,
@@ -89,7 +93,7 @@ test("the packed initializer produces a fully verified extension repository", {
   const dryRun = await execFileAsync(
     "npm",
     ["pack", "--dry-run", "--json"],
-    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+    { cwd: extension, env: npmEnvironment, maxBuffer: 10 * 1024 * 1024 },
   );
   const [extensionMetadata] = JSON.parse(dryRun.stdout);
   assert.deepEqual(
