@@ -104,6 +104,7 @@ export function renderTemplate(content, variables, sourcePath = "<template>") {
 export function createRenderPlan({
   templates,
   profileFiles = [],
+  generatedFiles = [],
   variables,
 }) {
   if (!Array.isArray(templates)) {
@@ -111,6 +112,9 @@ export function createRenderPlan({
   }
   if (!Array.isArray(profileFiles)) {
     throw new RenderError("Documentation profile files must be an array.");
+  }
+  if (!Array.isArray(generatedFiles)) {
+    throw new RenderError("Generated files must be an array.");
   }
 
   const destinations = new Map();
@@ -166,6 +170,30 @@ export function createRenderPlan({
         ? sourceContent
         : new Uint8Array(sourceContent);
     add(destination, content, `documentation profile ${sourcePath}`);
+  }
+
+  for (const generatedFile of generatedFiles) {
+    if (!generatedFile || typeof generatedFile !== "object") {
+      throw new RenderError("Each generated file entry must be an object.");
+    }
+    const destination = validateRelativePath(
+      generatedFile.path,
+      "Generated file path",
+    );
+    const sourceContent = generatedFile.content;
+    if (
+      typeof sourceContent !== "string" &&
+      !(sourceContent instanceof Uint8Array)
+    ) {
+      throw new RenderError(
+        `Generated file ${destination} must contain text or bytes.`,
+      );
+    }
+    const content =
+      typeof sourceContent === "string"
+        ? sourceContent
+        : new Uint8Array(sourceContent);
+    add(destination, content, `generated file ${destination}`);
   }
 
   plan.sort(comparePaths);
