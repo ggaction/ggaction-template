@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import * as fileSystem from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import test from "node:test";
+
+import {
+  checkGenerated,
+  validateAndBuild
+} from "../scripts/spec.js";
+
+const projectRoot = process.cwd();
+
+async function fixture(t) {
+  const root = await fileSystem.mkdtemp(join(tmpdir(), "ggaction-spec-test-"));
+  t.after(() => fileSystem.rm(root, { recursive: true, force: true }));
+  await fileSystem.cp(resolve(projectRoot, "spec"), resolve(root, "spec"), { recursive: true });
+  const evidence = JSON.parse(await fileSystem.readFile(resolve(root, "spec/evidence.json"), "utf8"));
+  const paths = new Set(
+    Object.values(evidence.requirements)
+      .flatMap(links => Object.values(links))
+      .flat()
+  );
+  for (const path of paths) {
+    const destination = resolve(root, path);
+    await fileSystem.mkdir(dirname(destination), { recursive: true });
+    await fileSystem.copyFile(resolve(projectRoot, path), destination);
+  }
+  return root;
+}
+
+test("validates the canonical specification and generated evidence", async () => {
+  const outputs = await validateAndBuild(projectRoot);
+  await checkGenerated(projectRoot, outputs);
+});
+
+test("rejects active specifications missing from the root index", async (t) => {
+  const root = await fixture(t);
+  await fileSystem.writeFile(
+    resolve(root, "spec/features/unindexed.md"),
+    (await fileSystem.readFile(resolve(root, "spec/features/reference.md"), "utf8"))
+      .replace("id: REF", "id: EXTRA")
+      .replace("# Reference Registration Graphic", "# Extra Feature")
+      .replaceAll("REF-ACC-", "EXTRA-ACC-")
+  );
+  await assert.rejects(() => validateAndBuild(root), /must be indexed exactly once/);
+});
+
+test("rejects unresolved work in a verified feature", async (t) => {
+  const root = await fixture(t);
+  const path = resolve(root, "spec/features/reference.md");
+  await fileSystem.appendFile(path, "\n<!-- SPEC-TODO: unresolved -->\n");
+  await assert.rejects(() => validateAndBuild(root), /verified specifications cannot contain SPEC-TODO/);
+});
+
+test("rejects stale generated indexes", async (t) => {
+  const root = await fixture(t);
+  const outputs = await validateAndBuild(root);
+  await fileSystem.appendFile(resolve(root, "spec/generated/feature-index.json"), "\n");
+  await assert.rejects(() => checkGenerated(root, outputs), /feature-index\.json is stale/);
+});
+
+test("rejects unknown requirement evidence", async (t) => {
+  const root = await fixture(t);
+  const path = resolve(root, "spec/evidence.json");
+  const evidence = JSON.parse(await fileSystem.readFile(path, "utf8"));
+  evidence.requirements["UNKNOWN-ACC-001"] = evidence.requirements["REF-ACC-001"];
+  await fileSystem.writeFile(path, `${JSON.stringify(evidence, null, 2)}\n`);
+  await assert.rejects(() => validateAndBuild(root), /unknown requirement UNKNOWN-ACC-001/);
+});
