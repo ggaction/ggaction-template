@@ -1,0 +1,439 @@
+#!/usr/bin/env node
+
+import { createHash } from "node:crypto";
+import * as fileSystem from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, extname, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { marked } from "marked";
+import { parse as parseYaml } from "yaml";
+
+const GENERATED_PATHS = [
+  "docs/_data/action_metadata.json",
+  "docs/_data/action_reference_links.json",
+  "docs/_data/page_metadata.json",
+  "docs/search-index.json",
+  "docs/llms.txt"
+];
+const REQUIRED_PROFILE_ROOTS = ["_includes", "_layouts", "_sass/docs", "assets/js"];
+
+export class DocumentationError extends Error {
+  constructor(messages) {
+    super(`Documentation verification failed:\n${messages.map(message => `- ${message}`).join("\n")}`);
+    this.name = "DocumentationError";
+    this.messages = messages;
+  }
+}
+
+function portable(path) {
+  return path.split(sep).join("/");
+}
+
+function sha256(content) {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+function json(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+async function readJson(path) {
+  return JSON.parse(await fileSystem.readFile(path, "utf8"));
+}
+
+async function filesBelow(directory) {
+  const files = [];
+  async function visit(current) {
+    let entries;
+    try {
+      entries = await fileSystem.readdir(current, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      throw error;
+    }
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const path = resolve(current, entry.name);
+      if (entry.isDirectory()) await visit(path);
+      else if (entry.isFile()) files.push(path);
+    }
+  }
+  await visit(directory);
+  return files;
+}
+
+export async function checkProfile(root = process.cwd()) {
+  const errors = [];
+  const docs = resolve(root, "docs");
+  let selection;
+  let lock;
+  try {
+    selection = await readJson(resolve(docs, "profile.json"));
+    lock = await readJson(resolve(docs, "profile-lock.json"));
+  } catch (error) {
+    throw new DocumentationError([`profile metadata is unreadable: ${error.message}`]);
+  }
+  if (selection.profile !== lock.profile || selection.version !== lock.version) {
+    errors.push("docs/profile.json does not match docs/profile-lock.json");
+  }
+  if (!lock.source || !/^[0-9a-f]{40}$/.test(lock.source.commit ?? "")) {
+    errors.push("docs/profile-lock.json must pin an exact upstream commit");
+  }
+  if (JSON.stringify(lock.protectedRoots) !== JSON.stringify(REQUIRED_PROFILE_ROOTS)) {
+    errors.push("docs/profile-lock.json protected roots do not match ggaction-docs-v1");
+  }
+  const declared = new Set();
+  for (const entry of lock.files ?? []) {
+    if (!entry || typeof entry.path !== "string" || !/^[0-9a-f]{64}$/.test(entry.sha256 ?? "")) {
+      errors.push("docs/profile-lock.json contains an invalid file entry");
+      continue;
+    }
+    if (declared.has(entry.path)) errors.push(`docs/profile-lock.json declares ${entry.path} more than once`);
+    declared.add(entry.path);
+    try {
+      const content = await fileSystem.readFile(resolve(docs, entry.path));
+      if (sha256(content) !== entry.sha256) errors.push(`docs/${entry.path} differs from its protected profile hash`);
+    } catch {
+      errors.push(`docs/${entry.path} is missing from the protected profile`);
+    }
+  }
+  const protectedFiles = [];
+  for (const profileRoot of REQUIRED_PROFILE_ROOTS) {
+    for (const path of await filesBelow(resolve(docs, profileRoot))) {
+      protectedFiles.push(portable(relative(docs, path)));
+    }
+  }
+  for (const path of protectedFiles) {
+    if (!declared.has(path)) errors.push(`docs/${path} is an undeclared protected-profile file`);
+  }
+  for (const path of declared) {
+    if (REQUIRED_PROFILE_ROOTS.some(profileRoot => path === profileRoot || path.startsWith(`${profileRoot}/`)) && !protectedFiles.includes(path)) {
+      errors.push(`docs/profile-lock.json has stale protected path ${path}`);
+    }
+  }
+  for (const path of [
+    "_config.yml",
+    "_data/pages.yml",
+    "_data/navigation_groups.yml",
+    "_data/chart_examples.yml",
+    "index.md",
+    "supported-features.md"
+  ]) {
+    try {
+      const stat = await fileSystem.stat(resolve(docs, path));
+      if (!stat.isFile()) errors.push(`docs/${path} must be a file`);
+    } catch {
+      errors.push(`docs/${path} is required`);
+    }
+  }
+  if (errors.length > 0) throw new DocumentationError(errors.sort());
+  return { selection, lock };
+}
+
+function parseFrontmatter(content, path) {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n/);
+  if (!match) throw new Error(`${path}: missing front matter`);
+  return {
+    attributes: parseYaml(match[1]) ?? {},
+    body: content.slice(match[0].length)
+  };
+}
+
+function pageUrl(path) {
+  const local = path.slice("docs/".length);
+  if (local === "index.md") return "/";
+  if (local.endsWith("/index.md")) return `/${local.slice(0, -"index.md".length)}`;
+  return `/${local.slice(0, -".md".length)}/`;
+}
+
+async function authoredPages(root) {
+  const docs = resolve(root, "docs");
+  const pages = [];
+  for (const absolutePath of await filesBelow(docs)) {
+    const path = `docs/${portable(relative(docs, absolutePath))}`;
+    if (!path.endsWith(".md") || path.includes("/_templates/") || path.includes("/_generated/")) continue;
+    const content = await fileSystem.readFile(absolutePath, "utf8");
+    const parsed = parseFrontmatter(content, path);
+    pages.push({
+      path,
+      url: pageUrl(path),
+      title: parsed.attributes.title,
+      description: parsed.attributes.description ?? "",
+      attributes: parsed.attributes,
+      body: parsed.body
+    });
+  }
+  return pages.sort((left, right) => left.url.localeCompare(right.url));
+}
+
+function plainText(markdown) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!??\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[#*_>|~-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function actionNames(example) {
+  if (Array.isArray(example.actions)) return example.actions;
+  return String(example.actions ?? "").split(" · ").map(value => value.trim()).filter(Boolean);
+}
+
+export async function createGeneratedDocumentation(root = process.cwd()) {
+  const docs = resolve(root, "docs");
+  const pages = await authoredPages(root);
+  const configuredPages = parseYaml(await fileSystem.readFile(resolve(docs, "_data/pages.yml"), "utf8")) ?? [];
+  const examples = parseYaml(await fileSystem.readFile(resolve(docs, "_data/chart_examples.yml"), "utf8")) ?? [];
+  const outputs = {};
+  const metadata = {};
+  const search = [];
+  for (const page of pages) {
+    metadata[page.url] = {
+      title: page.title,
+      description: page.description
+    };
+    search.push({
+      kind: page.url.startsWith("/api/") ? "API" : page.url.startsWith("/recipes/") ? "Recipe" : "Guide",
+      pageTitle: page.title,
+      sectionTitle: null,
+      summary: page.description,
+      keywords: page.title.split(/\s+/).filter(Boolean),
+      url: page.url
+    });
+  }
+  const configuredUrls = configuredPages.map(page => page.url);
+  const authoredUrls = pages.map(page => page.url);
+  if (new Set(configuredUrls).size !== configuredUrls.length) throw new DocumentationError(["docs/_data/pages.yml contains duplicate URLs"]);
+  const missingNavigation = authoredUrls.filter(url => !configuredUrls.includes(url));
+  const staleNavigation = configuredUrls.filter(url => !authoredUrls.includes(url));
+  if (missingNavigation.length || staleNavigation.length) {
+    throw new DocumentationError([
+      ...missingNavigation.map(url => `docs/_data/pages.yml does not index ${url}`),
+      ...staleNavigation.map(url => `docs/_data/pages.yml contains stale URL ${url}`)
+    ]);
+  }
+  const actionMetadata = {};
+  const actionReferenceLinks = {};
+  const apiPages = pages.filter(page => page.url.startsWith("/api/") && page.url !== "/api/");
+  for (const page of apiPages) actionReferenceLinks[page.title] = page.url;
+  for (const example of examples) {
+    if (!example.id || !example.image || !example.thumbnail || !example.url || !example.recipe_url) {
+      throw new DocumentationError(["every chart example requires id, image, thumbnail, url, and recipe_url"]);
+    }
+    const slug = example.recipe_url.split("/").filter(Boolean).at(-1);
+    const sourcePath = `examples/${slug}/program.js`;
+    const source = await fileSystem.readFile(resolve(root, sourcePath), "utf8");
+    outputs[`docs/_generated/examples/${slug}/program.js`] = source;
+    const moduleUrl = `${pathToFileURL(resolve(root, sourcePath)).href}?docs=${sha256(source).slice(0, 12)}`;
+    const executable = await import(moduleUrl);
+    if (typeof executable.svg !== "string" || !executable.svg.startsWith("<svg")) {
+      throw new DocumentationError([`${sourcePath} must export a rendered svg string`]);
+    }
+    outputs[`docs/assets/examples/${slug}.svg`] = executable.svg.endsWith("\n") ? executable.svg : `${executable.svg}\n`;
+    for (const name of actionNames(example)) {
+      actionMetadata[name] = { operation: "extension", layer: "graphic", domain: "{{domain}}" };
+      if (!actionReferenceLinks[name]) throw new DocumentationError([`chart example action ${name} has no API page`]);
+    }
+  }
+  outputs["docs/_data/action_metadata.json"] = json(actionMetadata);
+  outputs["docs/_data/action_reference_links.json"] = json(actionReferenceLinks);
+  outputs["docs/_data/page_metadata.json"] = json(metadata);
+  outputs["docs/search-index.json"] = json(search);
+  outputs["docs/llms.txt"] = [
+    `# {{packageName}} documentation`,
+    "",
+    "Specification-driven public documentation for the extension.",
+    "",
+    ...pages.flatMap(page => [`## ${page.title}`, `${page.url} — ${page.description}`, ""])
+  ].join("\n");
+  return Object.fromEntries(Object.entries(outputs).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+export async function writeGeneratedDocumentation(root, outputs) {
+  for (const [path, content] of Object.entries(outputs)) {
+    const destination = resolve(root, path);
+    await fileSystem.mkdir(dirname(destination), { recursive: true });
+    await fileSystem.writeFile(destination, content);
+  }
+}
+
+export async function checkGeneratedDocumentation(root, outputs) {
+  const errors = [];
+  for (const [path, expected] of Object.entries(outputs)) {
+    try {
+      if (await fileSystem.readFile(resolve(root, path), "utf8") !== expected) errors.push(`${path} is stale; run npm run docs:generate`);
+    } catch {
+      errors.push(`${path} is missing; run npm run docs:generate`);
+    }
+  }
+  for (const path of GENERATED_PATHS) {
+    if (!Object.hasOwn(outputs, path)) errors.push(`${path} is not owned by the documentation generator`);
+  }
+  if (errors.length > 0) throw new DocumentationError(errors.sort());
+}
+
+function escapeHtml(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function renderLiquidValues(content, site) {
+  return content
+    .replace(/\{\{\s*'([^']+)'\s*\|\s*relative_url\s*\}\}/g, "$1")
+    .replace(/\{\{\s*site\.([A-Za-z_]+)\s*\|\s*escape\s*\}\}/g, (_, name) => escapeHtml(site[name] ?? ""))
+    .replace(/\{\{\s*site\.([A-Za-z_]+)\s*\}\}/g, (_, name) => String(site[name] ?? ""));
+}
+
+function slug(value) {
+  return value.replace(/<[^>]+>/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function markdownHtml(markdown) {
+  return marked.parse(markdown).replace(/<h([1-6])>([\s\S]*?)<\/h\1>/g, (_, level, title) => `<h${level} id="${slug(title)}">${title}</h${level}>`);
+}
+
+function navigationHtml(groups, pages, currentUrl) {
+  return groups.map(group => {
+    const items = pages.filter(page => page.nav_group === group.id).sort((left, right) => left.nav_order - right.nav_order);
+    const links = items.map(item => `<li><a href="${item.url}"${item.url === currentUrl ? ' class="is-active" aria-current="page"' : ""}>${escapeHtml(item.nav_title ?? item.title)}</a></li>`).join("\n");
+    return `<details class="docs-nav-group" open><summary><span class="docs-nav-group__title">${escapeHtml(group.title)}</span></summary><ul>${links}</ul></details>`;
+  }).join("\n");
+}
+
+function pageOutputPath(buildRoot, url) {
+  return url === "/" ? resolve(buildRoot, "index.html") : resolve(buildRoot, url.slice(1), "index.html");
+}
+
+function sitePageHtml({ page, site, navigation, groups, content, actionMetadata, actionLinks }) {
+  const title = page.url === "/" ? site.title : `${page.title} | ${site.title}`;
+  return `<!DOCTYPE html>
+<html class="no-js" lang="${site.lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(page.description)}">
+  <link rel="stylesheet" href="/assets/main.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="docs-topbar"><div class="docs-topbar__inner"><div class="docs-brand-lockup"><a class="docs-brand" href="/">${escapeHtml(site.title)}</a><a class="docs-version" href="https://www.npmjs.com/package/${site.npm_package}/v/${site.version}">${site.version}</a></div><nav class="docs-topnav" aria-label="Primary navigation"><a href="/getting-started/">Getting Started</a><a href="/recipes/">Chart Recipes</a><a href="/api/">API</a><a href="${site.repository_url}">GitHub</a></nav><button class="nav-toggle-button" id="nav-toggle-button" type="button" aria-label="Open documentation navigation" aria-controls="docs-sidebar" aria-expanded="false"><span></span><span></span><span></span></button></div></header>
+  <button class="nav-backdrop" type="button" aria-label="Close documentation navigation"></button>
+  <div class="docs-shell"><aside class="docs-sidebar" id="docs-sidebar" aria-label="Documentation navigation"><button class="docs-sidebar-close" type="button">Close navigation</button><div class="docs-search"><label for="docs-search-input">Search documentation</label><div class="docs-search__control"><input id="docs-search-input" type="search" placeholder="Search docs" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="docs-search-results"><kbd aria-hidden="true">⌘/Ctrl K</kbd></div><ul id="docs-search-results" class="docs-search-results" role="listbox" hidden></ul></div><nav class="docs-sidenav">${navigationHtml(groups, navigation, page.url)}</nav></aside><main class="docs-content" id="main-content" aria-label="Content" data-page-toc="auto">${content}</main></div>
+  <footer class="docs-footer"><p><strong>${escapeHtml(site.title)} ${site.version}</strong> · Public documentation</p><a href="${site.repository_url}">GitHub</a></footer>
+  <script id="docs-search-config" type="application/json" data-index-url="/search-index.json" data-root-url="/"></script>
+  <script id="docs-action-metadata" type="application/json">${JSON.stringify(actionMetadata)}</script>
+  <script id="docs-action-redirects" type="application/json">${JSON.stringify(actionLinks)}</script>
+  <script src="/assets/js/docs-navigation.js"></script><script src="/assets/js/docs-content.js"></script><script src="/assets/js/docs-toc.js"></script><script src="/assets/js/docs-search.js"></script>
+</body>
+</html>\n`;
+}
+
+async function copyDirectory(source, destination) {
+  await fileSystem.mkdir(destination, { recursive: true });
+  await fileSystem.cp(source, destination, { recursive: true });
+}
+
+function resolveBuiltTarget(buildRoot, htmlPath, target) {
+  const [withoutHash] = target.split("#");
+  if (!withoutHash) return htmlPath;
+  const candidate = withoutHash.startsWith("/")
+    ? resolve(buildRoot, withoutHash.slice(1))
+    : resolve(dirname(htmlPath), withoutHash);
+  if (extname(candidate)) return candidate;
+  return resolve(candidate, "index.html");
+}
+
+async function checkBuiltLinks(buildRoot) {
+  const errors = [];
+  for (const htmlPath of (await filesBelow(buildRoot)).filter(path => path.endsWith(".html"))) {
+    const html = await fileSystem.readFile(htmlPath, "utf8");
+    if (/\{[{%]/.test(html)) errors.push(`${portable(relative(buildRoot, htmlPath))}: unresolved template expression`);
+    if (!html.includes('href="#main-content"') || !html.includes('id="main-content"')) errors.push(`${portable(relative(buildRoot, htmlPath))}: missing skip-link contract`);
+    for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
+      const target = match[1];
+      if (/^(?:https?:|mailto:|data:|#)/.test(target)) continue;
+      const builtTarget = resolveBuiltTarget(buildRoot, htmlPath, target);
+      try {
+        const stat = await fileSystem.stat(builtTarget);
+        if (!stat.isFile()) errors.push(`${portable(relative(buildRoot, htmlPath))}: ${target} does not resolve to a file`);
+      } catch {
+        errors.push(`${portable(relative(buildRoot, htmlPath))}: broken local link ${target}`);
+      }
+    }
+  }
+  if (errors.length > 0) throw new DocumentationError(errors.sort());
+}
+
+export async function buildDocumentationSite(root, destination) {
+  const docs = resolve(root, "docs");
+  const site = parseYaml(await fileSystem.readFile(resolve(docs, "_config.yml"), "utf8"));
+  const navigation = parseYaml(await fileSystem.readFile(resolve(docs, "_data/pages.yml"), "utf8"));
+  const groups = parseYaml(await fileSystem.readFile(resolve(docs, "_data/navigation_groups.yml"), "utf8"));
+  const actionMetadata = await readJson(resolve(docs, "_data/action_metadata.json"));
+  const actionLinks = await readJson(resolve(docs, "_data/action_reference_links.json"));
+  const pages = await authoredPages(root);
+  await fileSystem.mkdir(destination, { recursive: true });
+  for (const page of pages) {
+    const content = markdownHtml(renderLiquidValues(page.body, site));
+    const outputPath = pageOutputPath(destination, page.url);
+    await fileSystem.mkdir(dirname(outputPath), { recursive: true });
+    await fileSystem.writeFile(outputPath, sitePageHtml({ page, site, navigation, groups, content, actionMetadata, actionLinks }));
+  }
+  await copyDirectory(resolve(docs, "assets/js"), resolve(destination, "assets/js"));
+  await copyDirectory(resolve(docs, "assets/examples"), resolve(destination, "assets/examples"));
+  await fileSystem.copyFile(resolve(docs, "search-index.json"), resolve(destination, "search-index.json"));
+  await fileSystem.copyFile(resolve(docs, "llms.txt"), resolve(destination, "llms.txt"));
+  const styleFiles = (await filesBelow(resolve(docs, "_sass/docs"))).filter(path => path.endsWith(".scss"));
+  const css = ["html{font-family:system-ui,sans-serif;line-height:1.5}body{margin:0}ul{padding-left:1.25rem}img{max-width:100%;height:auto}"];
+  for (const path of styleFiles) css.push(await fileSystem.readFile(path, "utf8"));
+  await fileSystem.writeFile(resolve(destination, "assets/main.css"), `${css.join("\n")}\n`);
+  await checkBuiltLinks(destination);
+  return { pages: pages.length, destination };
+}
+
+async function verify(root) {
+  await checkProfile(root);
+  const outputs = await createGeneratedDocumentation(root);
+  await checkGeneratedDocumentation(root, outputs);
+  const buildRoot = await fileSystem.mkdtemp(join(tmpdir(), "ggaction-docs-build-"));
+  try {
+    return await buildDocumentationSite(root, buildRoot);
+  } finally {
+    await fileSystem.rm(buildRoot, { recursive: true, force: true });
+  }
+}
+
+async function main() {
+  const [command, option] = process.argv.slice(2);
+  const root = process.cwd();
+  if (command === "profile" && option === undefined) {
+    await checkProfile(root);
+    console.log("Documentation profile and structure are intact.");
+    return;
+  }
+  if (command === "generate" && [undefined, "--check"].includes(option)) {
+    await checkProfile(root);
+    const outputs = await createGeneratedDocumentation(root);
+    if (option === "--check") await checkGeneratedDocumentation(root, outputs);
+    else await writeGeneratedDocumentation(root, outputs);
+    console.log(option === "--check" ? "Generated documentation is current." : "Generated documentation outputs.");
+    return;
+  }
+  if (command === "verify" && option === undefined) {
+    const result = await verify(root);
+    console.log(`Documentation verified across ${result.pages} built pages.`);
+    return;
+  }
+  throw new Error("Usage: node scripts/docs.js profile|generate [--check]|verify");
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}

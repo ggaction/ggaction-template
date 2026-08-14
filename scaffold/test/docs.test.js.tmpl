@@ -1,0 +1,62 @@
+import assert from "node:assert/strict";
+import * as fileSystem from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import test from "node:test";
+
+import {
+  buildDocumentationSite,
+  checkGeneratedDocumentation,
+  checkProfile,
+  createGeneratedDocumentation,
+  writeGeneratedDocumentation
+} from "../scripts/docs.js";
+
+const projectRoot = process.cwd();
+
+async function sandbox(t, prefix) {
+  const root = await fileSystem.mkdtemp(join(tmpdir(), prefix));
+  t.after(() => fileSystem.rm(root, { recursive: true, force: true }));
+  return root;
+}
+
+test("keeps the pinned documentation profile intact", async () => {
+  const result = await checkProfile(projectRoot);
+  assert.equal(result.selection.profile, "ggaction-docs-v1");
+  assert.match(result.lock.source.commit, /^[0-9a-f]{40}$/);
+});
+
+test("rejects a modified protected documentation file", async (t) => {
+  const root = await sandbox(t, "ggaction-docs-profile-");
+  await fileSystem.cp(resolve(projectRoot, "docs"), resolve(root, "docs"), { recursive: true });
+  await fileSystem.appendFile(resolve(root, "docs/_layouts/default.html"), "\nchanged\n");
+  await assert.rejects(() => checkProfile(root), /differs from its protected profile hash/);
+});
+
+test("keeps generated examples, renders, and metadata current", async () => {
+  const outputs = await createGeneratedDocumentation(projectRoot);
+  await checkGeneratedDocumentation(projectRoot, outputs);
+  assert.match(outputs["docs/assets/examples/reference.svg"], /<circle/);
+  assert.equal(
+    outputs["docs/_generated/examples/reference/program.js"],
+    await fileSystem.readFile(resolve(projectRoot, "examples/reference/program.js"), "utf8")
+  );
+});
+
+test("rejects stale generated documentation", async (t) => {
+  const root = await sandbox(t, "ggaction-docs-generated-");
+  const outputs = await createGeneratedDocumentation(projectRoot);
+  await writeGeneratedDocumentation(root, outputs);
+  await fileSystem.appendFile(resolve(root, "docs/search-index.json"), "\n");
+  await assert.rejects(() => checkGeneratedDocumentation(root, outputs), /search-index\.json is stale/);
+});
+
+test("builds linked, accessible static documentation", async (t) => {
+  const destination = await sandbox(t, "ggaction-docs-site-");
+  const result = await buildDocumentationSite(projectRoot, destination);
+  const index = await fileSystem.readFile(resolve(destination, "index.html"), "utf8");
+  assert.equal(result.pages, 12);
+  assert.match(index, /class="skip-link"/);
+  assert.match(index, /id="main-content"/);
+  assert.match(index, /docs-search-config/);
+});
