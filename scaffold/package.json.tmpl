@@ -23,6 +23,9 @@
   "scripts": {
     "spec:generate": "node scripts/spec.js --write",
     "spec:validate": "node scripts/spec.js --check",
+    "docs:profile:check": "node scripts/docs.js profile",
+    "docs:generate": "node scripts/docs.js generate",
+    "docs:verify": "node scripts/docs.js verify",
     "test": "node --test",
     "typecheck": "tsc --noEmit",
     "verify": "npm run spec:validate && npm test && npm run typecheck"
@@ -36,7 +39,9 @@
   },
   "devDependencies": {
     "ggaction": "{{ggactionVersion}}",
-    "typescript": "{{typescriptVersion}}"
+    "marked": "18.0.9",
+    "typescript": "{{typescriptVersion}}",
+    "yaml": "2.9.0"
   },
   "engines": {
     "node": ">=20"
