@@ -21,9 +21,11 @@
     "LICENSE"
   ],
   "scripts": {
+    "spec:generate": "node scripts/spec.js --write",
+    "spec:validate": "node scripts/spec.js --check",
     "test": "node --test",
     "typecheck": "tsc --noEmit",
-    "verify": "npm test && npm run typecheck"
+    "verify": "npm run spec:validate && npm test && npm run typecheck"
   },
   "repository": {
     "type": "git",

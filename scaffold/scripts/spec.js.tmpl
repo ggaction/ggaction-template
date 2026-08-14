@@ -1,0 +1,355 @@
+#!/usr/bin/env node
+
+import * as fileSystem from "node:fs/promises";
+import { dirname, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const SPECIFICATIONS = {
+  data: {
+    statuses: new Set(["draft", "ready", "verified"]),
+    headings: [
+      "Meaning",
+      "Accepted Input Formats",
+      "Canonical Representation",
+      "Conversion Rules",
+      "Ambiguity and Errors",
+      "Ownership and Provenance",
+      "Examples",
+      "References"
+    ]
+  },
+  features: {
+    statuses: new Set(["draft", "ready", "verified"]),
+    headings: [
+      "Visualization",
+      "Variants",
+      "Data Requirements",
+      "Action Design",
+      "Examples",
+      "Acceptance Criteria",
+      "References"
+    ]
+  },
+  decisions: {
+    statuses: new Set(["open", "accepted", "rejected", "superseded"]),
+    headings: ["Context", "Options", "Decision", "Consequences"]
+  }
+};
+
+const ROOT_HEADINGS = [
+  "Purpose",
+  "Scope",
+  "Non-goals",
+  "Domain Model",
+  "Public Package Contract",
+  "Feature Index",
+  "Architecture Boundaries",
+  "Repository-wide Acceptance Criteria",
+  "Open Decisions"
+];
+const EVIDENCE_KINDS = ["implementation", "tests", "examples", "documentation"];
+const REQUIREMENT_PATTERN = /^[A-Z][A-Z0-9-]*-ACC-\d{3}$/;
+
+export class SpecificationError extends Error {
+  constructor(messages) {
+    super(`Specification validation failed:\n${messages.map(message => `- ${message}`).join("\n")}`);
+    this.name = "SpecificationError";
+    this.messages = messages;
+  }
+}
+
+function portable(path) {
+  return path.split(sep).join("/");
+}
+
+function parseScalar(value) {
+  const trimmed = value.trim();
+  if (trimmed === "[]") return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return trimmed.slice(1, -1).split(",").map(item => item.trim()).filter(Boolean);
+  }
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed.replace(/^(["'])(.*)\1$/, "$2");
+}
+
+export function parseSpecification(content, path) {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n/);
+  if (!match) throw new Error(`${path}: missing YAML front matter`);
+  const frontmatter = {};
+  for (const line of match[1].split("\n")) {
+    const pair = line.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (!pair) throw new Error(`${path}: invalid front matter line ${JSON.stringify(line)}`);
+    frontmatter[pair[1]] = parseScalar(pair[2]);
+  }
+  const body = content.slice(match[0].length);
+  const title = body.match(/^# ([^#\n].*)$/m)?.[1]?.trim();
+  const headings = [...body.matchAll(/^## \d+\. (.+)$/gm)].map(entry => entry[1].trim());
+  const requirements = [...body.matchAll(/^\|\s*([A-Z][A-Z0-9-]*-ACC-\d{3})\s*\|/gm)]
+    .map(entry => entry[1]);
+  return { path, content, frontmatter, title, headings, requirements };
+}
+
+async function activeSpecifications(root, type, errors) {
+  const directory = resolve(root, "spec", type);
+  let entries;
+  try {
+    entries = await fileSystem.readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+  const documents = [];
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    if (entry.isDirectory()) {
+      errors.push(`spec/${type}/${entry.name}: nested active specification directories are not supported`);
+      continue;
+    }
+    if (!entry.name.endsWith(".md")) continue;
+    const path = `spec/${type}/${entry.name}`;
+    try {
+      documents.push(parseSpecification(await fileSystem.readFile(resolve(root, path), "utf8"), path));
+    } catch (error) {
+      errors.push(error.message);
+    }
+  }
+  return documents;
+}
+
+function validateStructure(document, type, errors) {
+  const contract = SPECIFICATIONS[type];
+  const { frontmatter, path } = document;
+  if (frontmatter.version !== 1) errors.push(`${path}: version must be 1`);
+  if (typeof frontmatter.id !== "string" || !/^[A-Z][A-Z0-9-]*$/.test(frontmatter.id)) {
+    errors.push(`${path}: id must use uppercase letters, digits, and hyphens`);
+  }
+  if (!contract.statuses.has(frontmatter.status)) {
+    errors.push(`${path}: unsupported status ${JSON.stringify(frontmatter.status)}`);
+  }
+  if (!document.title) errors.push(`${path}: missing level-one title`);
+  for (const heading of contract.headings) {
+    if (!document.headings.includes(heading)) errors.push(`${path}: missing section ${heading}`);
+  }
+  if (["ready", "verified"].includes(frontmatter.status)) {
+    if (document.content.includes("SPEC-TODO")) errors.push(`${path}: ${frontmatter.status} specifications cannot contain SPEC-TODO`);
+    if (/^\|\s*\.\.\.\s*\|/m.test(document.content)) errors.push(`${path}: ${frontmatter.status} specifications cannot contain placeholder table rows`);
+  }
+  if (type === "features" && document.requirements.length === 0) {
+    errors.push(`${path}: feature specifications require acceptance criteria`);
+  }
+  if (type === "features" && !Array.isArray(frontmatter.decisions)) {
+    errors.push(`${path}: decisions must be an inline list`);
+  }
+}
+
+function validateUnique(documents, property, label, errors) {
+  const seen = new Map();
+  for (const document of documents) {
+    const value = property(document);
+    if (!value) continue;
+    if (seen.has(value)) errors.push(`${document.path}: duplicate ${label} ${value} also used by ${seen.get(value)}`);
+    else seen.set(value, document.path);
+  }
+}
+
+function indexedPaths(rootDocument, type) {
+  return [...rootDocument.content.matchAll(new RegExp(`\\]\\((${type}/[^)#]+\\.md)(?:#[^)]+)?\\)`, "g"))]
+    .map(entry => `spec/${entry[1]}`);
+}
+
+function validateIndex(rootDocument, type, documents, errors) {
+  const indexed = indexedPaths(rootDocument, type);
+  const active = documents.map(document => document.path);
+  for (const path of active) {
+    const count = indexed.filter(indexedPath => indexedPath === path).length;
+    if (count !== 1) errors.push(`spec/SPEC.md: ${path} must be indexed exactly once (found ${count})`);
+  }
+  for (const path of indexed) {
+    if (!active.includes(path)) errors.push(`spec/SPEC.md: indexed ${path} is not an active specification`);
+  }
+}
+
+async function validateLinks(root, documents, errors) {
+  for (const document of documents) {
+    for (const match of document.content.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const target = match[1].split("#")[0];
+      if (!target || /^[a-z]+:/i.test(target)) continue;
+      const absoluteTarget = resolve(root, dirname(document.path), target);
+      const relativeTarget = portable(relative(resolve(root, "spec"), absoluteTarget));
+      if (relativeTarget.startsWith("../") || !relativeTarget.endsWith(".md")) continue;
+      try {
+        const stat = await fileSystem.stat(absoluteTarget);
+        if (!stat.isFile()) errors.push(`${document.path}: reference ${target} is not a file`);
+      } catch {
+        errors.push(`${document.path}: unresolved specification reference ${target}`);
+      }
+    }
+  }
+}
+
+async function validateEvidence(root, requirements, sourceByRequirement, errors) {
+  const evidencePath = resolve(root, "spec/evidence.json");
+  let evidence;
+  try {
+    evidence = JSON.parse(await fileSystem.readFile(evidencePath, "utf8"));
+  } catch (error) {
+    errors.push(`spec/evidence.json: ${error.message}`);
+    return [];
+  }
+  if (evidence.version !== 1 || !evidence.requirements || typeof evidence.requirements !== "object") {
+    errors.push("spec/evidence.json: expected version 1 and a requirements object");
+    return [];
+  }
+  const expected = new Set(requirements);
+  for (const id of Object.keys(evidence.requirements)) {
+    if (!expected.has(id)) errors.push(`spec/evidence.json: unknown requirement ${id}`);
+  }
+  const traceability = [];
+  for (const id of [...expected].sort()) {
+    const links = evidence.requirements[id];
+    if (!links || typeof links !== "object") {
+      errors.push(`spec/evidence.json: missing evidence for ${id}`);
+      continue;
+    }
+    const normalized = {};
+    for (const kind of EVIDENCE_KINDS) {
+      const paths = links[kind];
+      if (!Array.isArray(paths) || paths.length === 0) {
+        errors.push(`spec/evidence.json: ${id}.${kind} must contain at least one path`);
+        normalized[kind] = [];
+        continue;
+      }
+      if (new Set(paths).size !== paths.length) errors.push(`spec/evidence.json: ${id}.${kind} contains duplicate paths`);
+      normalized[kind] = [...paths].sort();
+      for (const path of paths) {
+        if (typeof path !== "string" || path.startsWith("/") || path.includes("..") || path.startsWith("spec/generated/")) {
+          errors.push(`spec/evidence.json: ${id}.${kind} contains unsafe or derived path ${JSON.stringify(path)}`);
+          continue;
+        }
+        try {
+          const stat = await fileSystem.stat(resolve(root, path));
+          if (!stat.isFile()) errors.push(`spec/evidence.json: ${id}.${kind} path ${path} is not a file`);
+        } catch {
+          errors.push(`spec/evidence.json: stale ${id}.${kind} path ${path}`);
+        }
+      }
+    }
+    traceability.push({
+      id,
+      source: sourceByRequirement.get(id),
+      evidence: normalized,
+      verification: "unverified"
+    });
+  }
+  return traceability;
+}
+
+function indexFor(documents) {
+  return documents
+    .map(document => ({
+      id: document.frontmatter.id,
+      path: document.path.slice("spec/".length),
+      status: document.frontmatter.status,
+      title: document.title
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function json(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+export async function validateAndBuild(root = process.cwd()) {
+  const errors = [];
+  let rootDocument;
+  try {
+    rootDocument = parseSpecification(await fileSystem.readFile(resolve(root, "spec/SPEC.md"), "utf8"), "spec/SPEC.md");
+  } catch (error) {
+    throw new SpecificationError([error.message]);
+  }
+  if (rootDocument.frontmatter.version !== 1) errors.push("spec/SPEC.md: version must be 1");
+  if (!["draft", "ready", "verified"].includes(rootDocument.frontmatter.status)) errors.push("spec/SPEC.md: status must be draft, ready, or verified");
+  for (const heading of ROOT_HEADINGS) {
+    if (!rootDocument.headings.includes(heading)) errors.push(`spec/SPEC.md: missing section ${heading}`);
+  }
+  if (["ready", "verified"].includes(rootDocument.frontmatter.status) && rootDocument.content.includes("SPEC-TODO")) {
+    errors.push(`spec/SPEC.md: ${rootDocument.frontmatter.status} specifications cannot contain SPEC-TODO`);
+  }
+
+  const byType = {};
+  for (const type of Object.keys(SPECIFICATIONS)) {
+    byType[type] = await activeSpecifications(root, type, errors);
+    for (const document of byType[type]) validateStructure(document, type, errors);
+    validateUnique(byType[type], document => document.frontmatter.id, "id", errors);
+    validateIndex(rootDocument, type, byType[type], errors);
+  }
+  const allDocuments = [rootDocument, ...Object.values(byType).flat()];
+  validateUnique(allDocuments, document => document.frontmatter.id, "id", errors);
+  await validateLinks(root, allDocuments, errors);
+
+  const decisions = new Map(byType.decisions.map(document => [document.frontmatter.id, document]));
+  for (const feature of byType.features) {
+    for (const id of feature.frontmatter.decisions ?? []) {
+      const decision = decisions.get(id);
+      if (!decision) errors.push(`${feature.path}: unknown decision ${id}`);
+      else if (["ready", "verified"].includes(feature.frontmatter.status) && decision.frontmatter.status === "open") {
+        errors.push(`${feature.path}: ${feature.frontmatter.status} feature depends on open decision ${id}`);
+      }
+    }
+  }
+
+  const sourceByRequirement = new Map();
+  for (const document of allDocuments) {
+    for (const id of document.requirements) {
+      if (!REQUIREMENT_PATTERN.test(id)) errors.push(`${document.path}: invalid requirement id ${id}`);
+      if (sourceByRequirement.has(id)) errors.push(`${document.path}: duplicate requirement ${id}`);
+      else sourceByRequirement.set(id, document.path);
+    }
+  }
+  const traceability = await validateEvidence(root, [...sourceByRequirement.keys()], sourceByRequirement, errors);
+  if (errors.length > 0) throw new SpecificationError(errors.sort());
+
+  return {
+    "data-index.json": json({ version: 1, specifications: indexFor(byType.data) }),
+    "decision-index.json": json({ version: 1, specifications: indexFor(byType.decisions) }),
+    "feature-index.json": json({ version: 1, specifications: indexFor(byType.features) }),
+    "traceability.json": json({ version: 1, requirements: traceability })
+  };
+}
+
+export async function writeGenerated(root, outputs) {
+  const directory = resolve(root, "spec/generated");
+  await fileSystem.mkdir(directory, { recursive: true });
+  await Promise.all(Object.entries(outputs).map(([name, content]) => fileSystem.writeFile(resolve(directory, name), content)));
+}
+
+export async function checkGenerated(root, outputs) {
+  const errors = [];
+  for (const [name, expected] of Object.entries(outputs)) {
+    try {
+      const actual = await fileSystem.readFile(resolve(root, "spec/generated", name), "utf8");
+      if (actual !== expected) errors.push(`spec/generated/${name} is stale; run npm run spec:generate`);
+    } catch {
+      errors.push(`spec/generated/${name} is missing; run npm run spec:generate`);
+    }
+  }
+  if (errors.length > 0) throw new SpecificationError(errors);
+}
+
+async function main() {
+  const mode = process.argv[2];
+  if (!new Set(["--check", "--write"]).has(mode) || process.argv.length !== 3) {
+    throw new Error("Usage: node scripts/spec.js --check|--write");
+  }
+  const root = process.cwd();
+  const outputs = await validateAndBuild(root);
+  if (mode === "--write") await writeGenerated(root, outputs);
+  else await checkGenerated(root, outputs);
+  console.log(mode === "--write" ? "Generated specification indexes and traceability." : "Specification structure and generated evidence are current.");
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
