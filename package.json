@@ -18,6 +18,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "verify": "npm test && npm pack --dry-run"
   }
 }
