@@ -98,12 +98,16 @@ test("maps templates and profile files to sorted output paths", () => {
     profileFiles: [
       { path: "_layouts/default.html", content: "{{ content }}" },
     ],
+    generatedFiles: [
+      { path: "docs/profile-lock.json", content: "{}\n" },
+    ],
     variables: geoVariables(),
   });
 
   assert.deepEqual(plan, [
     { path: "AGENTS.md", content: "Domain: geo" },
     { path: "docs/_layouts/default.html", content: "{{ content }}" },
+    { path: "docs/profile-lock.json", content: "{}\n" },
     { path: "spec/SPEC.md", content: "# ggaction-geo" },
   ]);
 });
