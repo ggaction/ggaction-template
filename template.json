@@ -3,6 +3,7 @@
   "defaults": {
     "packagePrefix": "ggaction-",
     "githubOwner": "ggaction",
+    "ggactionVersion": "^0.0.10",
     "license": "MIT",
     "packageVersion": "0.0.0"
   },
