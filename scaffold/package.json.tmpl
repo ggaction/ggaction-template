@@ -26,9 +26,10 @@
     "docs:profile:check": "node scripts/docs.js profile",
     "docs:generate": "node scripts/docs.js generate",
     "docs:verify": "node scripts/docs.js verify",
+    "package:test": "node scripts/package-consumer.js",
     "test": "node --test",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run spec:validate && npm test && npm run typecheck"
+    "verify": "npm run spec:validate && npm run docs:verify && npm test && npm run typecheck && npm run package:test"
   },
   "repository": {
     "type": "git",
