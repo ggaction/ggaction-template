@@ -10,7 +10,9 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
-test("the installed npm package exposes a working initializer command", async (t) => {
+test("the packed initializer produces a fully verified extension repository", {
+  timeout: 120_000,
+}, async (t) => {
   const root = await mkdtemp(join(tmpdir(), "ggaction-package-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
 
@@ -55,5 +57,50 @@ test("the installed npm package exposes a working initializer command", async (t
   assert.match(
     await readFile(join(consumer, "ggaction-geo", "spec", "SPEC.md"), "utf8"),
     /package: "ggaction-geo"/,
+  );
+
+  const extension = join(consumer, "ggaction-geo");
+  await execFileAsync(
+    "npm",
+    ["install", "--no-audit", "--no-fund"],
+    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+  );
+  const specification = await execFileAsync(
+    "npm",
+    ["run", "spec:validate"],
+    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+  );
+  assert.match(specification.stdout, /generated evidence are current/);
+
+  const verification = await execFileAsync(
+    "npm",
+    ["run", "verify"],
+    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+  );
+  assert.match(
+    verification.stdout,
+    /Documentation verified across 12 built pages/,
+  );
+  assert.match(
+    verification.stdout,
+    /Packed consumer verified ggaction-geo@0\.0\.0/,
+  );
+
+  const dryRun = await execFileAsync(
+    "npm",
+    ["pack", "--dry-run", "--json"],
+    { cwd: extension, maxBuffer: 10 * 1024 * 1024 },
+  );
+  const [extensionMetadata] = JSON.parse(dryRun.stdout);
+  assert.deepEqual(
+    extensionMetadata.files.map((entry) => entry.path).sort(),
+    [
+      "LICENSE",
+      "README.md",
+      "package.json",
+      "src/actions/reference.js",
+      "src/index.js",
+      "types/index.d.ts",
+    ],
   );
 });
