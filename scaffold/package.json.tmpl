@@ -1,0 +1,42 @@
+{
+  "name": "{{packageName}}",
+  "version": "{{packageVersion}}",
+  "description": {{descriptionYaml}},
+  {{authorJsonProperty}}"license": "{{license}}",
+  "type": "module",
+  "sideEffects": [
+    "./src/index.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "src",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm test && npm run typecheck"
+  },
+  "repository": {
+    "type": "git",
+    "url": "{{repositoryUrl}}"
+  },
+  "peerDependencies": {
+    "ggaction": "{{ggactionVersion}}"
+  },
+  "devDependencies": {
+    "ggaction": "{{ggactionVersion}}",
+    "typescript": "{{typescriptVersion}}"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

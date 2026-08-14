@@ -1,0 +1,20 @@
+import { chart } from "ggaction";
+import "{{packageName}}";
+import {
+  {{referenceActionName}}Action,
+  type {{referenceOptionsName}}
+} from "{{packageName}}";
+
+const options: {{referenceOptionsName}} = {
+  id: "typed-reference",
+  x: 40,
+  y: 40,
+  radius: 12,
+  fill: "#2563eb"
+};
+
+const program = chart().{{referenceActionName}}(options);
+const direct = {{referenceActionName}}Action.call(chart(), options);
+
+program.{{referenceActionName}}({ radius: 16 });
+direct.createCanvas({ width: 160, height: 120 });

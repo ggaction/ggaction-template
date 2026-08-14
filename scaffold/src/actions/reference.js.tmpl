@@ -1,0 +1,22 @@
+import { action } from "ggaction/extension";
+
+export const {{referenceActionName}}Action = action(
+  {
+    op: "{{referenceActionName}}",
+    description: "Create the {{domain}} extension reference graphic."
+  },
+  function ({
+    id = "{{referenceGraphicId}}",
+    x = 80,
+    y = 60,
+    radius = 24,
+    fill = "#2563eb"
+  } = {}) {
+    return this
+      .createGraphics({ id, type: "circle" })
+      .editGraphics({ target: id, property: "x", value: x })
+      .editGraphics({ target: id, property: "y", value: y })
+      .editGraphics({ target: id, property: "radius", value: radius })
+      .editGraphics({ target: id, property: "fill", value: fill });
+  }
+);

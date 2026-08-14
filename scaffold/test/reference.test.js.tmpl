@@ -1,0 +1,110 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { chart } from "ggaction";
+import { chart as basicChart } from "ggaction/basic";
+import { action, registerExtension } from "ggaction/extension";
+import { renderToSVG } from "ggaction/svg";
+import "{{packageName}}";
+
+test("registers the reference action on complete programs only", () => {
+  assert.equal(typeof chart().{{referenceActionName}}, "function");
+  assert.equal(basicChart().{{referenceActionName}}, undefined);
+});
+
+test("creates one immutable, renderable reference graphic", () => {
+  const entered = chart().createCanvas({ width: 160, height: 120 });
+  const options = Object.freeze({
+    id: "custom-reference",
+    x: 48,
+    y: 52,
+    radius: 18,
+    fill: "#dc2626"
+  });
+  const result = entered.{{referenceActionName}}(options);
+
+  assert.equal(entered.graphicSpec.objects[options.id], undefined);
+  assert.deepEqual(options, {
+    id: "custom-reference",
+    x: 48,
+    y: 52,
+    radius: 18,
+    fill: "#dc2626"
+  });
+  assert.deepEqual(result.graphicSpec.objects[options.id].properties, {
+    x: 48,
+    y: 52,
+    radius: 18,
+    fill: "#dc2626"
+  });
+  const referenceTrace = result.trace.children.at(-1);
+  assert.equal(referenceTrace.op, "{{referenceActionName}}");
+  assert.deepEqual(
+    referenceTrace.children.map(node => node.op),
+    ["createGraphics", "editGraphics", "editGraphics", "editGraphics", "editGraphics"]
+  );
+  assert.deepEqual(result.actionStack, []);
+  assert.match(renderToSVG(result), /<circle[^>]+fill="#dc2626"/);
+});
+
+test("repeated calls update the same graphic without duplication", () => {
+  const once = chart()
+    .createCanvas({ width: 160, height: 120 })
+    .{{referenceActionName}}();
+  const twice = once.{{referenceActionName}}({ radius: 30 });
+
+  assert.equal(twice.graphicSpec.objects["{{referenceGraphicId}}"].properties.radius, 30);
+  assert.equal(
+    twice.graphicSpec.order.filter(id => id === "{{referenceGraphicId}}").length,
+    1
+  );
+});
+
+test("invalid calls leave the entered program unchanged", () => {
+  const entered = chart().createCanvas({ width: 160, height: 120 });
+  assert.throws(
+    () => entered.{{referenceActionName}}({ x: Number.NaN }),
+    /finite/
+  );
+  assert.throws(
+    () => entered.{{referenceActionName}}({ radius: -1 }),
+    /negative/
+  );
+  assert.equal(entered.graphicSpec.objects["{{referenceGraphicId}}"], undefined);
+  assert.deepEqual(entered.actionStack, []);
+});
+
+test("registration collisions fail before installing another action", () => {
+  const neverInstalled{{domainPascalCase}}Action = action(
+    {
+      op: "neverInstalled{{domainPascalCase}}Action",
+      description: "Remain absent after an atomic collision."
+    },
+    function () { return this; }
+  );
+  const collidingReferenceAction = action(
+    {
+      op: "{{referenceActionName}}",
+      description: "Attempt to collide with the reference action."
+    },
+    function () { return this; }
+  );
+
+  assert.throws(
+    () => registerExtension({
+      name: "{{packageName}}-collision-test",
+      actions: {
+        neverInstalled{{domainPascalCase}}Action,
+        {{referenceActionName}}: collidingReferenceAction
+      }
+    }),
+    /already defined/
+  );
+  assert.equal(chart().neverInstalled{{domainPascalCase}}Action, undefined);
+});
+
+test("runs the canonical executable example", async () => {
+  const example = await import("../examples/reference/program.js");
+  assert.equal(example.program.graphicSpec.objects["{{referenceGraphicId}}"].type, "circle");
+  assert.match(example.svg, /^<svg/);
+});

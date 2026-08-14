@@ -1,0 +1,12 @@
+import { registerExtension } from "ggaction/extension";
+
+import { {{referenceActionName}}Action } from "./actions/reference.js";
+
+registerExtension({
+  name: "{{packageName}}",
+  actions: {
+    {{referenceActionName}}: {{referenceActionName}}Action
+  }
+});
+
+export { {{referenceActionName}}Action } from "./actions/reference.js";

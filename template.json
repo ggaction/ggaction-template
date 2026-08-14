@@ -5,7 +5,8 @@
     "githubOwner": "ggaction",
     "ggactionVersion": "^0.0.10",
     "license": "MIT",
-    "packageVersion": "0.0.0"
+    "packageVersion": "0.0.0",
+    "typescriptVersion": "7.0.2"
   },
   "scaffold": "scaffold",
   "documentationProfile": "profiles/ggaction-docs-v1/profile.json"

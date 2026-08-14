@@ -69,14 +69,28 @@ export function createTemplateVariables(options, documentationProfile) {
     throw new RenderError("A documentation profile is required.");
   }
 
+  const domainPascalCase = options.domain
+    .split("-")
+    .map((part) => `${part[0].toUpperCase()}${part.slice(1)}`)
+    .join("");
   const values = {
     packageName: options.packageName,
     domain: options.domain,
+    domainPascalCase,
+    referenceActionName: `create${domainPascalCase}Reference`,
+    referenceOptionsName: `Create${domainPascalCase}ReferenceOptions`,
+    referenceGraphicId: `${options.domain}-reference`,
+    description: options.description,
     descriptionYaml: JSON.stringify(options.description),
+    authorJsonProperty:
+      options.author === undefined
+        ? ""
+        : `\"author\": ${JSON.stringify(options.author)},\n  `,
     packageVersion: options.packageVersion,
     repositoryUrl: options.repositoryUrl,
     license: options.license,
     ggactionVersion: options.ggactionVersion,
+    typescriptVersion: options.typescriptVersion,
     docsProfile: documentationProfile.profile,
     docsProfileVersion: documentationProfile.version,
   };

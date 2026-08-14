@@ -95,6 +95,7 @@ function normalizeManifest(manifest) {
     "ggactionVersion",
     "license",
     "packageVersion",
+    "typescriptVersion",
   ];
   for (const name of requiredDefaults) {
     if (typeof defaults?.[name] !== "string" || defaults[name].trim() === "") {
@@ -173,6 +174,7 @@ export function resolveInitializationOptions(values, manifest) {
     license,
     packageVersion: defaults.packageVersion,
     ggactionVersion,
+    typescriptVersion: defaults.typescriptVersion,
   });
 }
 

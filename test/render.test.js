@@ -52,11 +52,18 @@ test("creates the complete canonical variable map", () => {
   assert.deepEqual(geoVariables(), {
     packageName: "ggaction-geo",
     domain: "geo",
+    domainPascalCase: "Geo",
+    referenceActionName: "createGeoReference",
+    referenceOptionsName: "CreateGeoReferenceOptions",
+    referenceGraphicId: "geo-reference",
+    description: "Geographic extensions for ggaction",
     descriptionYaml: '"Geographic extensions for ggaction"',
+    authorJsonProperty: "",
     packageVersion: "0.0.0",
     repositoryUrl: "https://github.com/ggaction/ggaction-geo",
     license: "MIT",
     ggactionVersion: "^0.0.10",
+    typescriptVersion: "7.0.2",
     docsProfile: "ggaction-docs-v1",
     docsProfileVersion: "1.0.0",
   });

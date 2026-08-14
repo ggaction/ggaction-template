@@ -1,0 +1,160 @@
+---
+version: 1
+id: REF
+status: verified
+decisions: []
+---
+
+# Reference Registration Graphic
+
+## 1. Visualization
+
+The reference feature draws one colored circle. It is an executable baseline
+that proves package registration, ggaction composition, rendering, tests, and
+TypeScript augmentation are connected before domain features are designed.
+
+## 2. Variants
+
+### Supported
+
+- One circle with configurable identity, center, radius, and fill.
+- Repeated calls that update the same identified circle.
+
+### Not Supported
+
+- Domain visualization semantics. Those belong in features approved through
+  the specification interview.
+- New graphic primitives or renderers. The feature reuses ggaction's circle and
+  SVG renderer.
+
+## 3. Data Requirements
+
+No data contract is required.
+
+### Feature-specific Constraints
+
+- `x`, `y`, and `radius` must be finite numbers.
+- `radius` must be non-negative.
+
+## 4. Action Design
+
+### Reused ggaction Actions
+
+| Action | Role |
+| --- | --- |
+| `createGraphics` | Materialize the identified circle. |
+| `editGraphics` | Set its position, radius, and fill. |
+
+### New Extension Actions
+
+| Action | Purpose |
+| --- | --- |
+| `{{referenceActionName}}` | Create or update the executable reference circle. |
+
+#### `{{referenceActionName}}`
+
+##### Signature
+
+```typescript
+{{referenceActionName}}(options?: {{referenceOptionsName}}): ChartProgram;
+```
+
+##### Inputs
+
+| Option | Required | Type | Meaning |
+| --- | --- | --- | --- |
+| `id` | No | `string` | Graphic identity. |
+| `x` | No | `number` | Horizontal center. |
+| `y` | No | `number` | Vertical center. |
+| `radius` | No | `number` | Circle radius. |
+| `fill` | No | `string` | CSS fill color. |
+
+##### Defaults
+
+- `id`: `{{referenceGraphicId}}`
+- `x`: `80`
+- `y`: `60`
+- `radius`: `24`
+- `fill`: `#2563eb`
+
+##### Inference
+
+None.
+
+##### Reused Actions
+
+- `createGraphics`
+- `editGraphics`
+
+##### Effects
+
+###### Semantic
+
+- None.
+
+###### Graphical
+
+- Creates or updates one circle with the requested properties.
+
+###### Trace
+
+- Records one `{{referenceActionName}}` trace containing the reused action
+  traces.
+
+##### Errors
+
+- Rejects invalid graphic identifiers, non-finite numeric options, negative
+  radius values, and invalid fill values without mutating the entered program.
+
+## 5. Examples
+
+### REF-EX-001 Minimal
+
+```javascript
+import { chart } from "ggaction";
+import "{{packageName}}";
+
+const program = chart()
+  .createCanvas({ width: 160, height: 120 })
+  .{{referenceActionName}}();
+```
+
+The result contains one blue circle centered in the canvas.
+
+### REF-EX-002 Customized
+
+```javascript
+const program = chart()
+  .createCanvas({ width: 160, height: 120 })
+  .{{referenceActionName}}({ x: 48, y: 52, radius: 18, fill: "#dc2626" });
+```
+
+The result contains one red circle using the requested geometry.
+
+### REF-EX-003 Integration
+
+```javascript
+import { renderToSVG } from "ggaction/svg";
+
+const svg = renderToSVG(program);
+```
+
+The existing ggaction SVG renderer produces a visible `circle` element without
+an extension-specific renderer.
+
+## 6. Acceptance Criteria
+
+| ID | Criterion |
+| --- | --- |
+| REF-ACC-001 | Importing the package registers `{{referenceActionName}}` on the complete ggaction program and not on the basic entry. |
+| REF-ACC-002 | The action creates a renderable circle with the specified identity and properties while preserving the entered program. |
+| REF-ACC-003 | Repeating the action for one identity updates that circle without duplicating it. |
+| REF-ACC-004 | Invalid input fails without partially changing the entered program. |
+| REF-ACC-005 | Runtime exports and TypeScript module augmentation expose the same action contract. |
+
+## 7. References
+
+| Reference | Type | Relevance |
+| --- | --- | --- |
+| [ggaction extension authoring](https://github.com/ggaction/ggaction/blob/main/docs/reference/extension-authoring.md) | Upstream documentation | Defines registration, atomic collision handling, and type augmentation. |
+| [ggaction graphic primitives](https://github.com/ggaction/ggaction/blob/main/docs/reference/graphic-primitives.md) | Upstream documentation | Defines the reused circle representation. |

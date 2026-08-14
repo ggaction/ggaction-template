@@ -1,0 +1,25 @@
+---
+layout: default
+title: "{{referenceActionName}}"
+description: Create or update the generated extension's reference circle.
+---
+
+# `{{referenceActionName}}`
+
+```typescript
+{{referenceActionName}}(options?: {{referenceOptionsName}}): ChartProgram;
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | `{{referenceGraphicId}}` | Graphic identity. |
+| `x` | `number` | `80` | Horizontal center. |
+| `y` | `number` | `60` | Vertical center. |
+| `radius` | `number` | `24` | Non-negative circle radius. |
+| `fill` | `string` | `#2563eb` | CSS fill color. |
+
+The action returns a new immutable program, records a meaningful trace, and
+reuses ggaction's public `createGraphics` and `editGraphics` actions.
+
+See the [reference recipe](../recipes/reference.md) and
+[REF specification](../../spec/features/reference.md).
