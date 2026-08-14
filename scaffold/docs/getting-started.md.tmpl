@@ -1,0 +1,26 @@
+---
+layout: default
+title: Getting Started
+description: Install the extension and start a ggaction program.
+---
+
+# Getting Started
+
+Install ggaction and this extension together:
+
+```sh
+npm install ggaction {{packageName}}
+```
+
+Importing the extension registers its public actions on programs returned by
+`chart()`:
+
+```javascript
+import { chart } from "ggaction";
+import "{{packageName}}";
+
+const program = chart();
+```
+
+Continue with a feature tutorial only after that feature appears on the
+[Supported Features]({{ '/supported-features/' | relative_url }}) page.

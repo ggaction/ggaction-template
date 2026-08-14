@@ -1,0 +1,64 @@
+{
+  "profile": "ggaction-docs-v1",
+  "version": "1.0.0",
+  "source": {
+    "repository": "ggaction/ggaction",
+    "commit": "aadee67d5577de4c3c3c566beb930ad90a84febc",
+    "directory": "docs",
+    "license": "MIT",
+    "licenseFile": "LICENSE"
+  },
+  "protectedRoots": [
+    "_includes",
+    "_layouts",
+    "_sass/docs",
+    "assets/js"
+  ],
+  "files": [
+    "_includes/action-metadata.html",
+    "_includes/action-redirects.html",
+    "_includes/breadcrumbs.html",
+    "_includes/chart-card.html",
+    "_includes/chart-example.html",
+    "_includes/chart-gallery-card.html",
+    "_includes/docs-footer.html",
+    "_includes/gallery-filter.html",
+    "_includes/getting-started-chart.html",
+    "_includes/head.html",
+    "_includes/nav-entry.html",
+    "_includes/page-navigation.html",
+    "_includes/runnable-recipe-note.html",
+    "_includes/search-index.html",
+    "_includes/sidebar.html",
+    "_layouts/default.html",
+    "_sass/docs/_base.scss",
+    "_sass/docs/_content.scss",
+    "_sass/docs/_gallery.scss",
+    "_sass/docs/_navigation.scss",
+    "_sass/docs/_page-chrome.scss",
+    "_sass/docs/_responsive.scss",
+    "assets/js/docs-content.js",
+    "assets/js/docs-navigation.js",
+    "assets/js/docs-search.js",
+    "assets/js/docs-toc.js",
+    "assets/main.scss"
+  ],
+  "adaptations": [
+    {
+      "path": "_layouts/default.html",
+      "reason": "Read package branding and npm coordinates from Jekyll site settings."
+    },
+    {
+      "path": "_includes/docs-footer.html",
+      "reason": "Read package branding, npm coordinates, and license from Jekyll site settings."
+    },
+    {
+      "path": "_includes/getting-started-chart.html",
+      "reason": "Resolve the extension-owned getting-started example through chart_examples data."
+    },
+    {
+      "path": "_includes/runnable-recipe-note.html",
+      "reason": "Name both ggaction and the generated extension package without assuming row data."
+    }
+  ]
+}

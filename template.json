@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "defaults": {
+    "packagePrefix": "ggaction-",
+    "githubOwner": "ggaction",
+    "license": "MIT",
+    "packageVersion": "0.0.0"
+  },
+  "scaffold": "scaffold",
+  "documentationProfile": "profiles/ggaction-docs-v1/profile.json"
+}

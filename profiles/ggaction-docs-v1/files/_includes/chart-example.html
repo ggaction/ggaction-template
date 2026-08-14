@@ -1,0 +1,15 @@
+{% assign examples = site.data.chart_examples | where: "id", include.id %}
+{% assign example = examples | first %}
+<figure class="docs-example-figure">
+  <a href="{{ example.url | relative_url }}">
+    <img
+      src="{{ example.image | relative_url }}"
+      alt="{{ example.alt }}"
+      width="{{ example.width }}"
+      height="{{ example.height }}"
+      loading="eager"
+      fetchpriority="high"
+    >
+  </a>
+  <figcaption>{{ example.caption }}</figcaption>
+</figure>

@@ -36,7 +36,8 @@ An initialized repository must include:
 - synchronized JavaScript exports and TypeScript module augmentation;
 - action contracts and requirement traceability;
 - unit, contract, chart, and package-consumer tests;
-- runnable examples and public documentation; and
+- runnable examples and public documentation using the pinned
+  `ggaction-docs-v1` compatibility profile; and
 - automated verification through local commands and continuous integration.
 
 The generated specification surface is:
@@ -70,6 +71,81 @@ Files under `spec/_templates/` are authoring aids. They are not active
 specifications and must be excluded from active specification indexes and
 validation.
 
+The generated documentation surface is:
+
+```text
+docs/
+├─ profile.json
+├─ profile-lock.json
+├─ _config.yml
+├─ _data/pages.yml
+├─ _layouts/
+├─ _includes/
+├─ _sass/docs/
+├─ assets/
+├─ _generated/
+│  └─ examples/
+├─ _templates/
+│  ├─ RECIPE.md
+│  ├─ TUTORIAL.md
+│  └─ API.md
+├─ index.md
+├─ getting-started.md
+├─ tutorials/
+├─ recipes/
+├─ gallery/
+├─ concepts/
+├─ api/
+├─ reference/
+├─ supported-features.md
+└─ troubleshooting.md
+```
+
+`ggaction-docs-v1` is a deterministic, repository-local snapshot of the
+ggaction documentation shell pinned to an exact upstream commit. Generation and
+verification must not fetch a mutable GitHub branch or require network access.
+The profile preserves the compatible Jekyll layout, navigation model,
+components, styling, search, LLM metadata, responsive behavior, and
+accessibility conventions. Package branding may vary, but shared profile files
+must not diverge silently.
+
+`docs/profile.json` selects the profile and its version. Package branding comes
+from `package.json`, not a duplicated documentation setting. The generated
+`docs/profile-lock.json` records the pinned upstream source, protected roots,
+and sorted SHA-256 hashes for every profile-owned file. It may change only
+during initialization or an explicit profile upgrade. `_data/pages.yml` is the
+single navigation source. Files under `docs/_templates/` are authoring aids and
+must be excluded from navigation, search, and LLM-facing output.
+
+Files under `docs/_generated/` are deterministic documentation inputs and
+metadata. In particular, `docs/_generated/examples/<feature>/program.js` is a
+generated mirror of the canonical `examples/<feature>/program.js` used to place
+the same executable source in recipes and tutorials. Never edit or publish the
+generated mirror as an independent source.
+
+Extension documentation owns only extension behavior. It links to documentation
+for the installed ggaction version instead of copying core behavior. Each
+implemented feature must connect its specification to the applicable recipe,
+API or reference page, executable example, test evidence, and representative
+render. When a tutorial applies, it must use the same canonical program at
+`examples/<feature>/program.js` as tests and rendered documentation evidence.
+
+Generated repositories provide these documentation commands:
+
+- `npm run docs:profile:check` performs a read-only profile and structure
+  integrity check;
+- `npm run docs:generate` regenerates canonical example mirrors, metadata,
+  search, LLM, reference, and gallery output without changing authored pages or
+  the profile lock; and
+- `npm run docs:verify` checks profile integrity and generated freshness, builds
+  the site in a temporary directory, validates links and assets, exercises
+  canonical examples through the public package, and checks responsive,
+  keyboard, and baseline accessibility behavior.
+
+`npm run docs:generate -- --check` must compare deterministic generated output
+without modifying authored source. The root `npm run verify` command must
+include `npm run docs:verify`.
+
 ## 4. Initialization Interface
 
 A new extension repository is initialized with:
@@ -88,6 +164,12 @@ The required inputs are:
 By default, the initializer derives the package name and output directory from
 the domain. For example, `geo` produces the package `ggaction-geo` in
 `./ggaction-geo`.
+
+The generated package starts at version `0.0.0`, uses the MIT license, and
+derives `https://github.com/ggaction/<package-name>` as its repository URL.
+An author is omitted unless supplied explicitly. These defaults come from the
+template manifest; validation and derivation logic remain ordinary initializer
+code rather than a manifest expression language.
 
 `--package`, `--output`, `--author`, `--repository`, `--license`, and
 `--ggaction-version` may be provided as optional overrides or metadata.

@@ -1,0 +1,43 @@
+<aside
+  class="docs-sidebar"
+  id="docs-sidebar"
+  aria-label="Documentation navigation"
+>
+  <button class="docs-sidebar-close" type="button">Close navigation</button>
+  <div class="docs-search">
+    <label for="docs-search-input">Search documentation</label>
+    <div class="docs-search__control">
+      <input
+        id="docs-search-input"
+        type="search"
+        placeholder="Search docs"
+        autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded="false"
+        aria-controls="docs-search-results"
+      />
+      <kbd aria-hidden="true">⌘/Ctrl K</kbd>
+    </div>
+    <ul
+      id="docs-search-results"
+      class="docs-search-results"
+      role="listbox"
+      hidden
+    ></ul>
+  </div>
+
+  <nav class="docs-sidenav">
+    {% for group in site.data.navigation_groups %}
+      <details class="docs-nav-group">
+        <summary><span class="docs-nav-group__title">{{ group.title }}</span></summary>
+        <ul>
+          {% assign group_items = site.data.pages | where: "nav_group", group.id | sort: "nav_order" %}
+          {% for item in group_items %}
+            {% include nav-entry.html item=item %}
+          {% endfor %}
+        </ul>
+      </details>
+    {% endfor %}
+  </nav>
+</aside>
