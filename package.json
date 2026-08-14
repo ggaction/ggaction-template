@@ -1,8 +1,23 @@
 {
   "name": "create-ggaction-extension",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Specification-driven initializer for ggaction extensions",
   "license": "MIT",
+  "keywords": [
+    "ggaction",
+    "visualization",
+    "extension",
+    "scaffold",
+    "llm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ggaction/ggaction-template.git"
+  },
+  "homepage": "https://github.com/ggaction/ggaction-template#readme",
+  "bugs": {
+    "url": "https://github.com/ggaction/ggaction-template/issues"
+  },
   "type": "module",
   "bin": {
     "create-ggaction-extension": "bin/create-ggaction-extension.js"
@@ -17,8 +32,12 @@
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "node --test",
-    "verify": "npm test && npm pack --dry-run"
+    "verify": "npm test && npm pack --dry-run",
+    "prepublishOnly": "npm run verify"
   }
 }
